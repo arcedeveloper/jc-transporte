@@ -1,0 +1,16 @@
+{
+  "name": "jc-transporte",
+  "private": true,
+  "description": "JC Transporte — reservas de pasajes de bus + ubicación en vivo",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace backend",
+    "dev:frontend": "npm run dev --workspace frontend"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

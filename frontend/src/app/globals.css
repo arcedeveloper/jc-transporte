@@ -1,0 +1,97 @@
+@import 'tailwindcss';
+
+/*
+ * JC Transporte — tokens de diseño
+ *   ruta    azul de cartel de ruta: marca, acciones principales, asiento elegido
+ *   ambar   LED del cartel de destino: acento, asientos retenidos
+ *   monte   verde: libre, confirmado
+ *   tierra  tierra colorada: ocupado, errores, cancelado
+ *   papel   fondo
+ *   tinta   texto
+ */
+@theme inline {
+  --font-sans: var(--font-body-src), system-ui, sans-serif;
+  --font-display: var(--font-display-src), 'Arial Narrow', sans-serif;
+}
+
+@theme {
+  --color-ruta: #12355b;
+  --color-ruta-dark: #0b2440;
+  --color-ruta-50: #eef3f9;
+  --color-ruta-100: #dae5f1;
+  --color-ambar: #ffb000;
+  --color-ambar-dark: #8a5a00;
+  --color-ambar-50: #fff6dc;
+  --color-monte: #1f7a4d;
+  --color-monte-50: #e7f4ec;
+  --color-tierra: #b3412a;
+  --color-tierra-50: #fbece8;
+  --color-papel: #f4f6f8;
+  --color-tinta: #17202b;
+  --color-niebla: #5f6b78;
+  --color-linea: #dfe4ea;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--color-papel);
+  color: var(--color-tinta);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-ambar);
+  outline-offset: 2px;
+}
+
+/* Cartel LED de destino: puntitos encima del texto */
+.led-dots {
+  background-image: radial-gradient(circle, transparent 42%, rgb(6 16 28 / 0.88) 46%);
+  background-size: 5px 5px;
+}
+.led-text {
+  color: var(--color-ambar);
+  text-shadow:
+    0 0 6px rgb(255 176 0 / 0.75),
+    0 0 18px rgb(255 140 0 / 0.35);
+}
+
+/* Borde troquelado del boleto */
+.ticket-cut {
+  background-image: radial-gradient(circle at 10px 50%, var(--color-papel) 9px, transparent 10px);
+  background-size: 20px 20px;
+  background-repeat: repeat-x;
+  height: 20px;
+}
+
+/* Pin del bus en el mapa */
+.bus-pin {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--color-ruta);
+  border: 3px solid var(--color-ambar);
+  box-shadow: 0 6px 16px rgb(11 36 64 / 0.35);
+}
+.me-pin {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--color-ruta);
+  border: 4px solid #fff;
+  box-shadow: 0 0 0 6px rgb(18 53 91 / 0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

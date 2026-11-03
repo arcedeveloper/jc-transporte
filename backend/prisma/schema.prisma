@@ -1,0 +1,300 @@
+// JC Transporte — schema de base de datos (Neon / PostgreSQL)
+//
+// Decisiones (ver README → "Decisiones de diseño"):
+//  1. Sin asientos numerados: cada viaje tiene un cupo (capacidad del bus, 17 por defecto).
+//     Los lugares ocupados se calculan sumando los pasajeros de las reservas activas.
+//     Al crear una reserva se bloquea la fila del viaje (SELECT … FOR UPDATE), así dos personas
+//     reservando al mismo tiempo nunca pueden pasarse del cupo.
+//  2. Una reserva pendiente ocupa lugar hasta que se pague o venza el plazo (24 h).
+//  3. El admin puede "confirmar el viaje" (bookingClosed): nadie más puede reservar.
+//  4. Montos en Int (guaraníes, sin decimales).
+//  5. Todo el contacto con el pasajero es por WhatsApp.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled (-pooler)
+  directUrl = env("DIRECT_URL") // directa, para migraciones
+}
+
+enum UserRole {
+  admin
+  driver
+}
+
+enum TripStatus {
+  scheduled
+  in_progress
+  completed
+  cancelled
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  cancelled
+}
+
+/// Horario preferido en un pedido de viaje grupal
+enum TimeSlot {
+  morning
+  afternoon
+  night
+  any
+}
+
+/// Formato de la tarjeta de publicidad en la portada
+enum PromoLayout {
+  square // cuadrada: una columna
+  wide // rectangular: dos columnas
+}
+
+/// Tipos de gasto
+enum ExpenseCategory {
+  driver // sueldo del chofer
+  supplies // insumos: agua, obsequios
+  repair // reparación o imprevisto (pinchazo, algo roto)
+  fuel // combustible
+  other
+}
+
+enum GroupRequestStatus {
+  new
+  contacted
+  accepted
+  dismissed
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  role         UserRole
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  drivenTrips  Trip[]   @relation("TripDriver")
+  driverPays   Expense[] @relation("ExpenseDriver")
+}
+
+model Bus {
+  id        String   @id @default(uuid())
+  name      String
+  plate     String   @unique
+  /// Lugares que se venden por viaje
+  capacity    Int        @default(17)
+  /// Texto corto que ve el pasajero: "Aire acondicionado, asientos reclinables"
+  description String?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  trips       Trip[]
+  photos      BusPhoto[]
+}
+
+/// Fotos del bus (achicadas en el navegador antes de subir, ~150 KB cada una)
+model BusPhoto {
+  id        String   @id @default(uuid())
+  busId     String
+  mimeType  String
+  data      Bytes
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  bus       Bus      @relation(fields: [busId], references: [id], onDelete: Cascade)
+
+  @@index([busId, position])
+}
+
+model Route {
+  id              String   @id @default(uuid())
+  origin          String
+  destination     String
+  distanceKm      Float
+  durationMinutes Int
+  basePrice       Int // guaraníes
+  imageUrl        String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  trips           Trip[]
+
+  @@index([origin, destination])
+}
+
+model Trip {
+  id             String     @id @default(uuid())
+  busId          String
+  routeId        String
+  driverId       String?
+  departureTime  DateTime
+  arrivalTime    DateTime
+  price          Int // guaraníes por pasajero
+  status         TripStatus @default(scheduled)
+  /// "Viaje confirmado": el admin cerró las reservas (esté lleno o no)
+  bookingClosed  Boolean    @default(false)
+  closedAt       DateTime?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  // Última posición conocida (sin historial)
+  currentLat     Float?
+  currentLng     Float?
+  currentSpeed   Float? // km/h
+  lastLocationAt DateTime?
+  /// Publicidad en la portada (tarjeta con imagen)
+  showOnHome     Boolean     @default(true)
+  promoLayout    PromoLayout @default(square)
+  promoTitle     String?
+  promoText      String?
+  promoImageId   String?
+  createdAt      DateTime   @default(now())
+
+  bus           Bus            @relation(fields: [busId], references: [id])
+  route         Route          @relation(fields: [routeId], references: [id])
+  driver        User?          @relation("TripDriver", fields: [driverId], references: [id], onDelete: SetNull)
+  promoImage    PromoImage?    @relation(fields: [promoImageId], references: [id], onDelete: SetNull)
+  bookings      Booking[]
+  groupRequests GroupRequest[]
+  expenses      Expense[]
+
+  @@index([departureTime])
+  @@index([status])
+  @@index([driverId, departureTime])
+}
+
+model Booking {
+  id                 String        @id @default(uuid())
+  tripId             String
+  bookingCode        String        @unique // JC-2026-001
+  contactEmail       String? // ya no se pide: todo es por WhatsApp
+  contactPhone       String
+  numberOfPassengers Int
+  totalAmount        Int // guaraníes
+  status             BookingStatus @default(pending)
+  notes              String?
+  /// Fecha límite para pagar; después se cancela sola
+  paymentDeadline    DateTime
+  createdAt          DateTime      @default(now())
+  confirmedAt        DateTime?
+  cancelledAt        DateTime?
+  cancelReason       String?
+
+  trip       Trip        @relation(fields: [tripId], references: [id])
+  passengers Passenger[]
+
+  @@index([tripId, status])
+  @@index([status, paymentDeadline])
+}
+
+model Passenger {
+  id        String    @id @default(uuid())
+  bookingId String
+  fullName  String
+  document  String
+  phone     String
+  boarded   Boolean   @default(false)
+  boardedAt DateTime?
+  createdAt DateTime  @default(now())
+  booking   Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+}
+
+/// Imagen de publicidad (se achica en el navegador). Varios viajes pueden usar la misma.
+model PromoImage {
+  id        String   @id @default(uuid())
+  mimeType  String
+  data      Bytes
+  createdAt DateTime @default(now())
+  trips     Trip[]
+}
+
+/// Viaje grupal a medida: un grupo (12 a 17) pide su propio viaje
+model GroupRequest {
+  id            String             @id @default(uuid())
+  origin        String
+  destination   String
+  /// Día del viaje en Paraguay, "2026-11-05"
+  date          String
+  returnDate    String?
+  preferredTime TimeSlot           @default(any)
+  passengers    Int
+  fullName      String
+  /// Cédula de quien organiza
+  document      String             @default("")
+  contactPhone  String
+  notes         String?
+  status        GroupRequestStatus @default(new)
+  /// Viaje que se armó para el grupo (privado: no sale en la portada)
+  tripId        String?
+  /// Cuándo se le mandó el enlace por WhatsApp
+  notifiedAt    DateTime?
+  createdAt     DateTime           @default(now())
+
+  trip Trip? @relation(fields: [tripId], references: [id], onDelete: SetNull)
+
+  @@index([status, date])
+}
+
+/// Sugerencias de la gente: a dónde y cuándo les gustaría viajar
+model Suggestion {
+  id           String   @id @default(uuid())
+  destination  String
+  origin       String?
+  whenText     String?
+  message      String?
+  name         String?
+  contactPhone String?
+  isRead       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+/// Gasto: del viaje (tripId) o general (sin viaje). El sueldo del chofer lleva driverId.
+model Expense {
+  id          String          @id @default(uuid())
+  category    ExpenseCategory
+  description String?
+  amount      Int // guaraníes
+  /// Fecha del gasto (para el resumen del mes)
+  date        DateTime        @default(now())
+  tripId      String?
+  driverId    String?
+  createdAt   DateTime        @default(now())
+
+  trip   Trip? @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  driver User? @relation("ExpenseDriver", fields: [driverId], references: [id], onDelete: SetNull)
+
+  @@index([date])
+  @@index([tripId])
+}
+
+/// Contador atómico para los códigos JC-<año>-<n>
+model BookingCounter {
+  year      Int @id
+  lastValue Int @default(0)
+}
+
+model Settings {
+  id             Int      @id @default(1)
+  bankName       String
+  bankAccount    String
+  bankHolder     String
+  bankRuc        String?
+  bankAlias      String?
+  adminWhatsapp  String // formato internacional sin "+": 595981123456
+  adminEmail     String?
+  /// Redes sociales: solo el usuario, sin @ (ej: jctransporte_py)
+  instagram      String?
+  tiktok         String?
+  /// Mensajes del cartel LED de la portada (además de las rutas)
+  signMessages   String[] @default([])
+  /// Si el cartel también muestra las rutas activas
+  signShowRoutes Boolean  @default(true)
+  /// Viaje grupal a medida: personas mínimas y máximas, y días de anticipación
+  groupMinPeople Int      @default(12)
+  groupMaxPeople Int      @default(17)
+  groupMinDays   Int      @default(5)
+  updatedAt      DateTime @updatedAt
+}
