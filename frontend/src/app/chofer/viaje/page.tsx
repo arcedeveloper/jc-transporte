@@ -1,8 +1,9 @@
 'use client';
 
+import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, BatteryCharging, Navigation, TriangleAlert, WifiOff } from 'lucide-react';
 import { useNow } from '@/components/admin/use-tracking';
@@ -26,8 +27,8 @@ interface TripData {
   summary: { total: number; boarded: number; unpaid: number };
 }
 
-export default function DriverTripPage() {
-  const { id } = useParams<{ id: string }>();
+function DriverTripPageInner() {
+  const id = useSearchParams().get('id') ?? '';
   const { data, error, loading, reload } = useQuery(() => api<TripData>(`/api/driver/trips/${id}`, { auth: true }), [id]);
   const sharing = useLocationSharing(id, (msg) => {
     toast.error(msg);
@@ -151,5 +152,13 @@ export default function DriverTripPage() {
         )}
       </section>
     </>
+  );
+}
+
+export default function DriverTripPage() {
+  return (
+    <Suspense>
+      <DriverTripPageInner />
+    </Suspense>
   );
 }

@@ -25,7 +25,7 @@ export function MyBookings({ initialCode }: { initialCode: string }) {
     setError(null);
     // Si la reserva se hizo desde este celular, se abre completa (con el teléfono guardado)
     const mine = saved.find((b) => b.code === c);
-    router.push(mine ? `/reserva/${c}?tel=${encodeURIComponent(mine.phone)}` : `/reserva/${c}`);
+    router.push(mine ? `/reserva?code=${encodeURIComponent(c)}&tel=${encodeURIComponent(mine.phone)}` : `/reserva?code=${encodeURIComponent(c)}`);
   }
 
   return (
@@ -42,7 +42,7 @@ export function MyBookings({ initialCode }: { initialCode: string }) {
             {saved.map((b) => (
               <li key={b.code}>
                 <Link
-                  href={`/reserva/${b.code}?tel=${encodeURIComponent(b.phone)}`}
+                  href={`/reserva?code=${encodeURIComponent(b.code)}&tel=${encodeURIComponent(b.phone)}`}
                   className="flex items-center justify-between gap-3 px-5 py-4 hover:bg-ruta-50"
                 >
                   <span>

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { usePath } from '@/lib/paths';
 import { CalendarDays, LayoutDashboard, LogOut, Radio, Settings, Ticket, type LucideIcon } from 'lucide-react';
 import { AuthGuard } from '@/components/auth-guard';
 import { cn } from '@/components/ui';
@@ -56,7 +57,7 @@ const sections: Section[] = [
 const under = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const pathname = usePath();
   const router = useRouter();
   const user = useSession('admin')?.user;
   const logout = useAuth((s) => s.logout);

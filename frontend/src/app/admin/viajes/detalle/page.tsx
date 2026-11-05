@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft, FileSpreadsheet, Lock, LockOpen, Pencil, Radio, Trash2 } from 'lucide-react';
 import { Occupancy, Panel } from '@/components/admin/bits';
 import { BookingDetail } from '@/components/admin/booking-detail';
@@ -26,8 +26,8 @@ interface CancelResult {
   contacts: { code: string; wasPaid: boolean; phone: string; name: string; passengers: number }[];
 }
 
-export default function TripDetailPage() {
-  const { id } = useParams<{ id: string }>();
+function TripDetailPageInner() {
+  const id = useSearchParams().get('id') ?? '';
   const { data, error, loading, reload } = useQuery(
     () => api<{ trip: TripDetail; availability: Availability }>(`/api/admin/trips/${id}`, { auth: true }),
     [id],
@@ -164,7 +164,7 @@ export default function TripDetailPage() {
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
           {(trip.status === 'in_progress' || trip.lastLocationAt) && (
-            <ButtonLink href={`/admin/viajes/${id}/mapa`} variant="primary" size="sm">
+            <ButtonLink href={`/admin/viajes/mapa?id=${id}`} variant="primary" size="sm">
               <Radio className="size-4" /> Mapa en vivo
             </ButtonLink>
           )}
@@ -458,5 +458,12 @@ export default function TripDetailPage() {
         {isPast && active.length > 0 && <p className="text-niebla">Descargá antes la planilla si querés guardar la lista de pasajeros.</p>}
       </ConfirmDelete>
     </>
+  );
+}
+export default function TripDetailPage() {
+  return (
+    <Suspense>
+      <TripDetailPageInner />
+    </Suspense>
   );
 }

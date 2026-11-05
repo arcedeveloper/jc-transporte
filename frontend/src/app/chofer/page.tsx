@@ -62,7 +62,7 @@ function TripList({ trips, showDate }: { trips: DriverTrip[]; showDate?: boolean
       {trips.map((t) => (
         <li key={t.id}>
           <Link
-            href={`/chofer/viaje/${t.id}`}
+            href={`/chofer/viaje?id=${t.id}`}
             className="flex items-center justify-between gap-3 rounded-2xl border-2 border-linea bg-white p-5 transition hover:border-ruta"
           >
             <span>

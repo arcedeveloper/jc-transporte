@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePath } from '@/lib/paths';
 import { Mail, Ticket } from 'lucide-react';
 import { FaInstagram, FaTiktok } from 'react-icons/fa';
 import { WhatsAppIcon } from './whatsapp-icon';
@@ -19,7 +19,7 @@ export function Logo({ light }: { light?: boolean }) {
 }
 
 export function SiteHeader() {
-  const pathname = usePathname();
+  const pathname = usePath();
   const onHome = pathname === '/';
   return (
     <header className={cn('relative z-20', onHome ? 'bg-ruta' : 'border-b border-linea bg-white')}>
@@ -125,8 +125,8 @@ export function SiteFooter() {
 /** Botón flotante de WhatsApp. Se oculta mientras elegís asientos (ahí está la barra de compra). */
 export function WhatsAppFloat() {
   const { whatsapp } = usePublicInfo();
-  const pathname = usePathname();
-  if (!whatsapp || pathname.startsWith('/viaje/')) return null;
+  const pathname = usePath();
+  if (!whatsapp || pathname === '/viaje') return null;
   return (
     <a
       href={waLink(whatsapp, 'Hola, tengo una consulta sobre los pasajes')}

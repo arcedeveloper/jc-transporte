@@ -60,7 +60,7 @@ function TripPromoCard({ t, i }: { t: FeaturedTrip; i: number }) {
       className={cn(wide && 'sm:col-span-2')}
     >
       <Link
-        href={`/viaje/${t.id}`}
+        href={`/viaje?id=${t.id}`}
         className={cn(
           'group flex h-full flex-col overflow-hidden rounded-2xl border border-linea bg-white transition hover:-translate-y-0.5 hover:shadow-lg',
           !t.bookable && 'opacity-80',

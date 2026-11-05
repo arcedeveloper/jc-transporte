@@ -142,7 +142,7 @@ export function BookingFlow({ tripId }: { tripId: string }) {
         label: `${booking.trip.origin} › ${booking.trip.destination}`,
         departureTime: booking.trip.departureTime,
       });
-      router.push(`/reserva/${booking.code}?tel=${encodeURIComponent(contactPhone)}&nueva=1`);
+      router.push(`/reserva?code=${encodeURIComponent(booking.code)}&tel=${encodeURIComponent(contactPhone)}&nueva=1`);
     } catch (err) {
       setSubmitting(false);
       toast.error(errorMessage(err));

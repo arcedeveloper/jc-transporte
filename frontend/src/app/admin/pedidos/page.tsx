@@ -1,5 +1,6 @@
 'use client';
 
+import { siteUrl } from '@/lib/paths';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CalendarPlus, Check, Copy, Trash2, Undo2, Users } from 'lucide-react';
@@ -140,7 +141,7 @@ function RequestCard({
   onChanged: () => void;
 }) {
   const open = r.status === 'new' || r.status === 'contacted';
-  const link = r.trip && typeof window !== 'undefined' ? `${window.location.origin}/viaje/${r.trip.id}` : '';
+  const link = r.trip && typeof window !== 'undefined' ? siteUrl(`/viaje?id=${r.trip.id}`) : '';
 
   const firstMsg = `Hola ${r.fullName.split(' ')[0]}, te escribimos de JC Transporte por el viaje grupal que pediste: ${r.origin} › ${r.destination}, ${dateLabel(r.date)}${r.returnDate ? ` (vuelta ${dateLabel(r.returnDate)})` : ''}, ${r.passengers} personas.`;
   const message =
@@ -211,7 +212,7 @@ function RequestCard({
             Viaje armado: {r.trip.route.origin} › {r.trip.route.destination}, {dateTime(r.trip.departureTime)}, {gs(r.trip.price)} c/u
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <Link href={`/admin/viajes/${r.trip.id}`} className={buttonClass('outline', 'sm')}>
+            <Link href={`/admin/viajes/detalle?id=${r.trip.id}`} className={buttonClass('outline', 'sm')}>
               Ver viaje y reservas
             </Link>
             <Button

@@ -73,7 +73,7 @@ export default function TripsAdmin() {
               <ul className="divide-y divide-linea overflow-hidden rounded-2xl border border-linea bg-white">
                 {trips.map((t) => (
                   <li key={t.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
-                    <Link href={`/admin/viajes/${t.id}`} className="min-w-0 hover:underline">
+                    <Link href={`/admin/viajes/detalle?id=${t.id}`} className="min-w-0 hover:underline">
                       <span className="font-display text-2xl font-bold">{hhmm(t.departureTime)}</span>{' '}
                       <span className="font-bold">
                         {t.route.origin} › {t.route.destination}
@@ -85,7 +85,7 @@ export default function TripsAdmin() {
                     <div className="flex items-center gap-3">
                       <Occupancy used={t.occupied} total={t.bus.capacity} />
                       {t.status === 'in_progress' ? (
-                        <Link href={`/admin/viajes/${t.id}/mapa`} className="flex items-center gap-1.5 rounded-full bg-monte px-3 py-1 text-sm font-bold text-white">
+                        <Link href={`/admin/viajes/mapa?id=${t.id}`} className="flex items-center gap-1.5 rounded-full bg-monte px-3 py-1 text-sm font-bold text-white">
                           <Radio className="size-4" aria-hidden /> Mapa
                         </Link>
                       ) : (

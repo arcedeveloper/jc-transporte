@@ -53,7 +53,7 @@ export default function LiveOverview() {
               const silent = at ? now - new Date(at).getTime() > 2 * 60 * 1000 : true;
               return (
                 <li key={t.id}>
-                  <Link href={`/admin/viajes/${t.id}/mapa`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 hover:bg-ruta-50">
+                  <Link href={`/admin/viajes/mapa?id=${t.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 hover:bg-ruta-50">
                     <span>
                       <span className="font-bold">
                         {t.route.origin} › {t.route.destination}

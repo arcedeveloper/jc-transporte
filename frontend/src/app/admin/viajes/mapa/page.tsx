@@ -1,8 +1,9 @@
 'use client';
 
+import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { ArrowLeft, Clock, Gauge, TriangleAlert, Wifi, WifiOff } from 'lucide-react';
 import { useNow, useTracking } from '@/components/admin/use-tracking';
 import { ErrorBox, Spinner, TripBadge, cn } from '@/components/ui';
@@ -18,8 +19,8 @@ const LiveMap = dynamic(() => import('@/components/live-map'), {
 
 const NO_SIGNAL_MS = 2 * 60 * 1000;
 
-export default function TripMapPage() {
-  const { id } = useParams<{ id: string }>();
+function TripMapPageInner() {
+  const id = useSearchParams().get('id') ?? '';
   const { data, error, loading, reload } = useQuery(() => api<TripLocation>(`/api/admin/trips/${id}/location`, { auth: true }), [id]);
   const { positions, statuses, connected } = useTracking([id]);
   const now = useNow();
@@ -34,7 +35,7 @@ export default function TripMapPage() {
 
   return (
     <>
-      <Link href={`/admin/viajes/${id}`} className="inline-flex items-center gap-1.5 font-bold text-ruta hover:underline">
+      <Link href={`/admin/viajes/detalle?id=${id}`} className="inline-flex items-center gap-1.5 font-bold text-ruta hover:underline">
         <ArrowLeft className="size-4" /> Detalle del viaje
       </Link>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -88,5 +89,13 @@ export default function TripMapPage() {
         </div>
       </dl>
     </>
+  );
+}
+
+export default function TripMapPage() {
+  return (
+    <Suspense>
+      <TripMapPageInner />
+    </Suspense>
   );
 }

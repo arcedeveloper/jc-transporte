@@ -59,7 +59,10 @@ if (typeof window !== 'undefined') {
 export const areaFromPath = (path: string): Area => (path.startsWith('/chofer') ? 'driver' : 'admin');
 
 export function currentArea(): Area {
-  return typeof window !== 'undefined' ? areaFromPath(window.location.pathname) : 'admin';
+  if (typeof window === 'undefined') return 'admin';
+  const base = (process.env.NEXT_PUBLIC_BASE_PATH ?? '').replace(/\/$/, '');
+  const path = window.location.pathname;
+  return areaFromPath(base && path.startsWith(base) ? path.slice(base.length) : path);
 }
 
 /** Token de la sección actual (o de la que se indique). */
