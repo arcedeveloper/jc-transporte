@@ -1,11 +1,10 @@
 'use client';
 
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft, FileSpreadsheet, Lock, LockOpen, Pencil, Radio, Trash2 } from 'lucide-react';
 import { Occupancy, Panel } from '@/components/admin/bits';
-import { BookingDetail } from '@/components/admin/booking-detail';
 import { ConfirmDelete } from '@/components/admin/confirm-delete';
 import { PromoPanel } from '@/components/admin/promo-panel';
 import { TripForm } from '@/components/admin/trip-form';
@@ -37,7 +36,6 @@ function TripDetailPageInner() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
-  const [openBooking, setOpenBooking] = useState<string | null>(null);
   /** Después de cancelar el viaje: lista de pasajeros para avisar por WhatsApp */
   const [cancelResult, setCancelResult] = useState<CancelResult | null>(null);
   const [notified, setNotified] = useState<Set<string>>(new Set());
@@ -61,11 +59,8 @@ function TripDetailPageInner() {
   /** Viaje futuro: solo se borra si no tiene reservas activas */
   const canDelete = !!trip && trip.status !== 'in_progress' && (isPast || active.length === 0);
 
-  const fullBooking: AdminBooking | null = useMemo(() => {
-    const b = trip?.bookings.find((x) => x.id === openBooking);
-    if (!b || !trip) return null;
-    return { ...b, trip: { id: trip.id, departureTime: trip.departureTime, arrivalTime: trip.arrivalTime, route: trip.route } };
-  }, [trip, openBooking]);
+  /** Solo para ver: confirmadas y esperando pago (las acciones están en Reservas) */
+  const listed = (trip?.bookings ?? []).filter((b) => b.status === 'confirmed' || b.status === 'pending');
 
   async function setClosed(close: boolean) {
     setBusy(true);
@@ -305,21 +300,19 @@ function TripDetailPageInner() {
           </Panel>
 
           <Panel title="Reservas de este viaje" className="print:hidden">
-            {trip.bookings.length === 0 ? (
+            {listed.length === 0 ? (
               <p className="text-niebla">Sin reservas.</p>
             ) : (
               <ul className="divide-y divide-linea">
-                {trip.bookings.map((b) => (
-                  <li key={b.id}>
-                    <button onClick={() => setOpenBooking(b.id)} className="flex w-full items-center justify-between gap-3 py-3 text-left hover:bg-ruta-50">
-                      <span>
-                        <span className="font-display text-xl font-bold">{b.bookingCode}</span>
-                        <span className="block text-sm text-niebla">
-                          {b.passengers.map((p) => p.fullName).join(', ')}
-                        </span>
+                {listed.map((b) => (
+                  <li key={b.id} className="flex items-center justify-between gap-3 py-3">
+                    <span>
+                      <span className="font-display text-xl font-bold">{b.bookingCode}</span>
+                      <span className="block text-sm text-niebla">
+                        {b.passengers.map((p) => p.fullName).join(', ')}
                       </span>
-                      <BookingBadge status={b.status} />
-                    </button>
+                    </span>
+                    <BookingBadge status={b.status} />
                   </li>
                 ))}
               </ul>
@@ -329,7 +322,6 @@ function TripDetailPageInner() {
       </div>
 
       <TripForm open={editing} onClose={() => setEditing(false)} onSaved={() => void reload(true)} trip={trip} />
-      <BookingDetail booking={fullBooking} onClose={() => setOpenBooking(null)} onChanged={() => void reload(true)} />
 
       <Modal open={closeOpen} onClose={() => setCloseOpen(false)} title="Confirmar viaje">
         <p>
