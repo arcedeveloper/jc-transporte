@@ -150,19 +150,7 @@ tripsAdminRouter.post('/', async (req, res) => {
   await assertBusFree(bus.id, data.departureTime, returnTime ?? arrivalTime);
   await assertPdf(data.pdfId);
 
-  // La publicidad (imagen, formato y textos) se copia del último viaje de la misma ruta,
-  // así no hay que subir la imagen cada vez.
-  const last = await prisma.trip.findFirst({
-    where: { routeId: route.id, OR: [{ promoImageId: { not: null } }, { promoTitle: { not: null } }] },
-    orderBy: { createdAt: 'desc' },
-    select: { promoImageId: true, promoLayout: true, promoTitle: true, promoText: true },
-  });
-  // El PDF del paquete también se copia del último viaje de la ruta, si no se eligió otro
-  const lastPdf =
-    data.pdfId === undefined
-      ? await prisma.trip.findFirst({ where: { routeId: route.id, pdfId: { not: null } }, orderBy: { createdAt: 'desc' }, select: { pdfId: true } })
-      : null;
-
+  // Cada viaje nuevo empieza sin imagen ni PDF: solo lleva lo que se elige al crearlo.
   const trip = await prisma.trip.create({
     data: {
       busId: bus.id,
@@ -173,8 +161,7 @@ tripsAdminRouter.post('/', async (req, res) => {
       returnTime,
       price: data.price ?? route.basePrice,
       showOnHome: data.showOnHome ?? true,
-      ...(last ?? {}),
-      pdfId: data.pdfId !== undefined ? data.pdfId : (lastPdf?.pdfId ?? null),
+      pdfId: data.pdfId ?? null,
     },
     include: tripListInclude,
   });

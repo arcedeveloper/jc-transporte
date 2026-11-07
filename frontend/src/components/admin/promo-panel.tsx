@@ -12,7 +12,7 @@ import { toast } from '@/store/toast';
 
 /**
  * Publicidad del viaje en la portada: imagen (flyer o logo), formato de la tarjeta,
- * título y texto. Los viajes nuevos de la misma ruta copian esto solos.
+ * título y texto.
  */
 export function PromoPanel({ trip, onChanged }: { trip: AdminTrip; onChanged: () => void }) {
   const input = useRef<HTMLInputElement>(null);

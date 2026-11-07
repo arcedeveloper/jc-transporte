@@ -498,7 +498,6 @@ export function TripForm({
                 <FileText className="size-5" /> Elegir PDF
               </Button>
             )}
-            {!trip && !pdfFile && <p className="text-sm text-niebla">Si no elegís uno, se usa el del último viaje de esta ruta (si tenía).</p>}
           </Field>
 
           {/* ---------- Publicidad ---------- */}
@@ -545,7 +544,7 @@ export function TripForm({
                     >
                       <ImagePlus className="size-6" />
                       <span className="font-bold">Subir imagen del banner</span>
-                      <span className="text-xs">Si no subís una, se usa la del último viaje de esta ruta</span>
+                      <span className="text-xs">Opcional</span>
                     </button>
                   )}
                   {image && (
