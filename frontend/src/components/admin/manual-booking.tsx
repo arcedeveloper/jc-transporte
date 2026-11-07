@@ -11,10 +11,11 @@ interface Pax {
   key: number;
   fullName: string;
   document: string;
+  phone: string;
 }
 
 let nextKey = 1;
-const blankPax = (): Pax => ({ key: nextKey++, fullName: '', document: '' });
+const blankPax = (): Pax => ({ key: nextKey++, fullName: '', document: '', phone: '' });
 
 /**
  * Cargar una reserva a mano (cliente que reservó por teléfono o en persona).
@@ -37,14 +38,12 @@ export function ManualBooking({
   left: number;
 }) {
   const [pax, setPax] = useState<Pax[]>([blankPax()]);
-  const [phone, setPhone] = useState('');
   const [paid, setPaid] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setPax([blankPax()]);
-    setPhone('');
     setPaid(true);
   }, [open]);
 
@@ -54,7 +53,9 @@ export function ManualBooking({
     e.preventDefault();
     if (pax.some((p) => p.fullName.trim().length < 3)) return toast.error('Escribí nombre y apellido de cada pasajero');
     if (pax.some((p) => p.document.trim().length < 3)) return toast.error('Escribí la cédula de cada pasajero');
-    if (phone.replace(/\D/g, '').length < 6) return toast.error('Escribí el WhatsApp o teléfono de contacto');
+    const contact = pax[0]?.phone.trim() ?? '';
+    if (contact.replace(/\D/g, '').length < 6) return toast.error('Escribí el WhatsApp del pasajero 1');
+    if (pax.some((p) => p.phone.trim() && p.phone.replace(/\D/g, '').length < 6)) return toast.error('Revisá los números de WhatsApp');
     setSaving(true);
     try {
       const r = await api<{ booking: { bookingCode: string } }>('/api/admin/bookings', {
@@ -62,9 +63,9 @@ export function ManualBooking({
         auth: true,
         body: {
           tripId,
-          contactPhone: phone.trim(),
+          contactPhone: contact,
           paid,
-          passengers: pax.map((p) => ({ fullName: p.fullName.trim(), document: docClean(p.document) })),
+          passengers: pax.map((p) => ({ fullName: p.fullName.trim(), document: docClean(p.document), phone: p.phone.trim() || undefined })),
         },
       });
       toast.success(`Reserva ${r.booking.bookingCode} cargada${paid ? ' y confirmada' : ''}`);
@@ -107,6 +108,14 @@ export function ManualBooking({
                   value={p.document}
                   onChange={(e) => update(p.key, { document: docInput(e.target.value) })}
                 />
+                <Input
+                  label={i === 0 ? 'WhatsApp' : 'WhatsApp (opcional)'}
+                  inputMode="tel"
+                  placeholder="0981 123 456"
+                  value={p.phone}
+                  onChange={(e) => update(p.key, { phone: e.target.value })}
+                  hint={i === 0 ? 'Por acá le confirmamos.' : 'Si lo dejás vacío, se usa el del pasajero 1.'}
+                />
               </div>
             </li>
           ))}
@@ -117,8 +126,6 @@ export function ManualBooking({
             <Plus className="size-4" /> Agregar otro pasajero
           </Button>
         )}
-
-        <Input label="WhatsApp de contacto" inputMode="tel" placeholder="0981 123 456" value={phone} onChange={(e) => setPhone(e.target.value)} />
 
         <div>
           <p className="mb-1.5 text-sm font-bold">¿Ya pagó?</p>
