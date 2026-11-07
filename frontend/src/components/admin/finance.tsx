@@ -31,7 +31,7 @@ export function FinanceCards({ summary }: { summary: FinanceSummary | undefined 
     <>
       {card('Recaudado', summary?.revenue, 'text-monte', 'Pagos confirmados del mes')}
       {card('Gastos', summary?.expenses, 'text-tierra', 'Sueldos, insumos, imprevistos…')}
-      {card('Ganancia', summary?.profit, summary && summary.profit < 0 ? 'text-tierra' : 'text-ruta', 'Recaudado menos gastos')}
+      {card('Ganancia', summary?.profit, summary && summary.profit < 0 ? 'text-tierra' : 'text-ruta', 'Recaudación Neta')}
     </>
   );
 }
@@ -90,8 +90,8 @@ export function ExpensesPanel({
       }
     >
       <p className="-mt-2 mb-4 text-sm text-niebla">
-        Los gastos de un viaje también se cargan adentro del viaje (Cuentas del viaje). El Excel trae todos los ingresos y gastos del mes, y un
-        resumen por viaje.
+        Para ver cuentas de meses anteriores, en el apartado de arriba en "Mes". El Excel trae todos los ingresos y gastos del mes, y un resumen
+        por viaje.
       </p>
       {loading ? (
         <Spinner />
