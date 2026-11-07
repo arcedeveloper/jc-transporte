@@ -61,9 +61,9 @@ export default function TripsAdmin() {
       </PageTitle>
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-niebla">Todos los próximos viajes, ordenados por día.</p>
+        <p className="text-niebla">{showPast ? 'Viajes que ya pasaron, de a un mes.' : 'Todos los próximos viajes, ordenados por día.'}</p>
         <Button variant="ghost" size="sm" onClick={() => setShowPast((v) => !v)}>
-          {showPast ? 'Ocultar viajes anteriores' : 'Ver viajes anteriores'}
+          {showPast ? 'Volver a los próximos viajes' : 'Ver viajes anteriores'}
         </Button>
       </div>
 
@@ -94,7 +94,7 @@ export default function TripsAdmin() {
         </section>
       )}
 
-      {loading ? (
+      {showPast ? null : loading ? (
         <Spinner />
       ) : error ? (
         <ErrorBox message={error.message} onRetry={() => void reload()} />
