@@ -91,19 +91,6 @@ function TripDetailPageInner() {
     }
   }
 
-  async function complete() {
-    setBusy(true);
-    try {
-      await api(`/api/admin/trips/${id}/complete`, { method: 'POST', auth: true });
-      toast.success('Viaje marcado como finalizado');
-      void reload(true);
-    } catch (e) {
-      toast.error(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function cancelTrip() {
     setBusy(true);
     try {
@@ -169,11 +156,6 @@ function TripDetailPageInner() {
             </Button>
           )}
           {open && (
-            <Button variant="outline" size="sm" loading={busy} onClick={() => void complete()}>
-              Marcar finalizado
-            </Button>
-          )}
-          {open && (
             <Button variant="ghost" size="sm" className="text-tierra hover:bg-tierra-50" onClick={() => setCancelOpen(true)}>
               Cancelar viaje
             </Button>
@@ -227,7 +209,9 @@ function TripDetailPageInner() {
           })()}
 
           <div className="mt-5 space-y-2 border-t border-linea pt-5">
+            {/* Confirmar viaje solo antes de la salida: después el viaje se da por hecho */}
             {trip.status === 'scheduled' &&
+              new Date(trip.departureTime).getTime() > Date.now() &&
               (trip.bookingClosed ? (
                 <>
                   <p className="flex items-center gap-2 rounded-xl bg-ruta-50 p-3 font-bold text-ruta">

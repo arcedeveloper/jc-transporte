@@ -1,8 +1,8 @@
 import { prisma } from '../lib/prisma.js';
 import { cancelBooking } from '../modules/bookings/bookings.service.js';
-import { businessToday } from '../config/business.js';
+import { businessDayRange, businessToday } from '../config/business.js';
 import { addDaysStr } from '../lib/group-rules.js';
-import { notifyChanged } from '../realtime/socket.js';
+import { notifyChanged, trackingEvents } from '../realtime/socket.js';
 
 /*
  * Tarea automática: cancela las reservas pendientes cuyo plazo de pago venció,
@@ -22,6 +22,26 @@ async function cancelUnpaidBookings() {
       notifyChanged();
     }
   }
+}
+
+/**
+ * Pasada la medianoche del día del viaje, el viaje se da por hecho: queda "Finalizado" solo.
+ * (Si no se canceló antes, se realizó.)
+ */
+async function completeFinishedTrips() {
+  const todayStart = businessDayRange(businessToday()).start;
+  const trips = await prisma.trip.findMany({
+    where: { status: { in: ['scheduled', 'in_progress'] }, departureTime: { lt: todayStart }, arrivalTime: { lte: new Date() } },
+    select: { id: true },
+  });
+  if (!trips.length) return;
+  await prisma.trip.updateMany({
+    where: { id: { in: trips.map((t) => t.id) } },
+    data: { status: 'completed', completedAt: new Date() },
+  });
+  for (const t of trips) trackingEvents.status(t.id, 'completed');
+  console.log(`✅ ${trips.length} viaje(s) marcados como finalizados`);
+  notifyChanged();
 }
 
 /** Corre una tarea cada `ms` sin que se superpongan ejecuciones. */
@@ -59,5 +79,6 @@ async function tidyUp() {
 
 export function startJobs() {
   every(60 * 60 * 1000, 'cancelar reservas impagas', cancelUnpaidBookings);
+  every(60 * 60 * 1000, 'finalizar viajes pasados', completeFinishedTrips);
   every(6 * 60 * 60 * 1000, 'ordenar pedidos e imágenes', tidyUp);
 }
