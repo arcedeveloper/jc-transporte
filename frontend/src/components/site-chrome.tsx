@@ -122,8 +122,9 @@ export function SiteFooter() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-white/10 py-9 text-center text-sm text-white/50">
-        © {new Date().getFullYear()} JC Transporte
+            <div className="border-t border-white/10 py-9 text-center text-sm text-white/50">
+        <p>© {new Date().getFullYear()} JC Transporte</p>
+        <p className="mt-1">Creado por César Matías Rodas Arce</p>
       </div>
     </footer>
   );

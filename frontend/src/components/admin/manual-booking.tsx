@@ -114,7 +114,6 @@ export function ManualBooking({
                   placeholder="0981 123 456"
                   value={p.phone}
                   onChange={(e) => update(p.key, { phone: e.target.value })}
-                  hint={i === 0 ? 'Por acá le confirmamos.' : 'Si lo dejás vacío, se usa el del pasajero 1.'}
                 />
               </div>
             </li>
