@@ -7,7 +7,7 @@ import { Check, CircleCheck, Copy, Landmark, TriangleAlert } from 'lucide-react'
 import { WhatsAppIcon } from './whatsapp-icon';
 import { api } from '@/lib/api';
 import { copyText, saveBooking } from '@/lib/browser';
-import { dayLong, gs, hhmm } from '@/lib/format';
+import { dayLong, gs, hhmm, returnLabel } from '@/lib/format';
 import { useQuery } from '@/lib/use-query';
 import type { PublicBooking } from '@/lib/types';
 import { toast } from '@/store/toast';
@@ -124,7 +124,10 @@ function Ticket({ booking: b }: { booking: PublicBooking }) {
             <p className="font-bold">{b.trip.destination}</p>
           </div>
         </div>
-        <p className="mt-2 text-niebla">{dayLong(b.trip.departureTime)}</p>
+        <p className="mt-2 text-niebla">
+          {dayLong(b.trip.departureTime)}
+          {b.trip.returnTime && <> · Retorno {returnLabel(b.trip.departureTime, b.trip.returnTime)}</>}
+        </p>
 
         <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-dashed border-linea pt-5">
           <div>

@@ -30,6 +30,7 @@ const SearchSchema = z.object({
 
 const tripPublic = {
   route: true,
+  pdf: { select: { id: true, fileName: true } },
   bus: {
     select: {
       name: true,
@@ -156,9 +157,11 @@ tripsRouter.get('/:id', async (req, res) => {
       destination: trip.route.destination,
       departureTime: trip.departureTime,
       arrivalTime: trip.arrivalTime,
+      returnTime: trip.returnTime,
       durationMinutes: trip.route.durationMinutes,
       price: trip.price,
       status: trip.status,
+      pdf: trip.pdf ? { id: trip.pdf.id, fileName: trip.pdf.fileName } : null,
       busName: trip.bus.name,
       bus: busPublic(trip.bus),
       promo: promoPublic(trip),

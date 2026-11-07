@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { ImagePlus, Pencil, Plus, Star, Trash2, Users } from 'lucide-react';
+import { ImagePlus, Pencil, Plus, Star, Trash2, Users, X } from 'lucide-react';
 import { PageTitle } from '@/components/admin/bits';
 import { ConfirmDelete } from '@/components/admin/confirm-delete';
 import { Button, Empty, ErrorBox, Field, Input, Modal, Spinner, cn } from '@/components/ui';
@@ -20,8 +20,26 @@ export default function BusesAdmin() {
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<AdminBus | null>(null);
+  /** Fotos elegidas al crear un bus nuevo (se suben al guardar) */
+  const [newPhotos, setNewPhotos] = useState<{ file: File; url: string }[]>([]);
+  const photoInput = useRef<HTMLInputElement>(null);
+
+  function clearNewPhotos() {
+    newPhotos.forEach((p) => URL.revokeObjectURL(p.url));
+    setNewPhotos([]);
+  }
+
+  function addNewPhotos(files: FileList | null) {
+    if (!files?.length) return;
+    const room = MAX_PHOTOS - newPhotos.length;
+    const list = Array.from(files).slice(0, room);
+    if (files.length > list.length) toast.info(`Máximo ${MAX_PHOTOS} fotos por bus.`);
+    setNewPhotos((prev) => [...prev, ...list.map((file) => ({ file, url: URL.createObjectURL(file) }))]);
+    if (photoInput.current) photoInput.current.value = '';
+  }
 
   function open(bus: AdminBus | 'new') {
+    clearNewPhotos();
     setEditing(bus);
     setForm(
       bus === 'new' ? empty : { name: bus.name, plate: bus.plate, capacity: String(bus.capacity), description: bus.description ?? '' },
@@ -33,9 +51,25 @@ export default function BusesAdmin() {
     const body = { name: form.name, plate: form.plate, capacity: Number(form.capacity), description: form.description.trim() || null };
     setSaving(true);
     try {
-      if (editing === 'new') await api('/api/admin/buses', { method: 'POST', auth: true, body });
-      else if (editing) await api(`/api/admin/buses/${editing.id}`, { method: 'PATCH', auth: true, body });
-      toast.success(editing === 'new' ? 'Bus creado. Ahora podés subirle fotos.' : 'Bus guardado');
+      if (editing === 'new') {
+        const { bus } = await api<{ bus: AdminBus }>('/api/admin/buses', { method: 'POST', auth: true, body });
+        // Las fotos se suben una por una, ya achicadas
+        let failed = 0;
+        for (const p of newPhotos) {
+          try {
+            const dataUrl = await resizeImage(p.file);
+            await api(`/api/admin/buses/${bus.id}/photos`, { method: 'POST', auth: true, body: { dataUrl } });
+          } catch {
+            failed++;
+          }
+        }
+        if (failed) toast.error(`El bus se creó, pero ${failed} foto(s) no se pudieron subir. Probá de nuevo desde "Subir fotos".`);
+        else toast.success(newPhotos.length ? 'Bus creado con sus fotos' : 'Bus creado');
+        clearNewPhotos();
+      } else if (editing) {
+        await api(`/api/admin/buses/${editing.id}`, { method: 'PATCH', auth: true, body });
+        toast.success('Bus guardado');
+      }
       setEditing(null);
       void reload(true);
     } catch (err) {
@@ -135,6 +169,40 @@ export default function BusesAdmin() {
               className="w-full rounded-xl border-2 border-linea bg-white px-3.5 py-2.5 text-base focus:border-ruta focus:outline-none"
             />
           </Field>
+          {editing === 'new' && (
+            <Field label={`Fotos (${newPhotos.length} de ${MAX_PHOTOS}, opcional)`} hint="La primera es la principal. Las fotos se achican solas antes de subir.">
+              <input ref={photoInput} type="file" accept="image/*" multiple hidden onChange={(e) => addNewPhotos(e.target.files)} />
+              <div className="grid grid-cols-4 gap-2">
+                {newPhotos.map((p, i) => (
+                  <div key={p.url} className="relative aspect-square overflow-hidden rounded-xl border-2 border-linea">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.url} alt={`Foto ${i + 1}`} className="size-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        URL.revokeObjectURL(p.url);
+                        setNewPhotos((prev) => prev.filter((x) => x.url !== p.url));
+                      }}
+                      className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-tinta/70 text-white"
+                      aria-label={`Quitar foto ${i + 1}`}
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+                ))}
+                {newPhotos.length < MAX_PHOTOS && (
+                  <button
+                    type="button"
+                    onClick={() => photoInput.current?.click()}
+                    className="grid aspect-square place-items-center rounded-xl border-2 border-dashed border-linea text-niebla hover:border-ruta hover:text-ruta"
+                    aria-label="Agregar fotos"
+                  >
+                    <ImagePlus className="size-6" />
+                  </button>
+                )}
+              </div>
+            </Field>
+          )}
           <Button type="submit" size="lg" className="w-full" loading={saving}>
             Guardar bus
           </Button>

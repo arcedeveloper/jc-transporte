@@ -26,6 +26,12 @@ const dateTimeFmt = new Intl.DateTimeFormat('es-PY', {
 });
 export const dateTime = (d: string | Date) => capitalize(dateTimeFmt.format(new Date(d)).replace(/\./g, ''));
 
+/** Retorno: "18:00" si es el mismo día de la salida, si no "Sáb, 7 nov, 18:00" */
+export function returnLabel(departure: string | Date, ret: string | Date) {
+  const day = (d: string | Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion' }).format(new Date(d));
+  return day(departure) === day(ret) ? hhmm(ret) : dateTime(ret);
+}
+
 export const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export function duration(min: number) {

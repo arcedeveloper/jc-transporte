@@ -11,7 +11,7 @@ import { useLocationSharing } from '@/components/driver/use-location-sharing';
 import { PayLine } from '@/components/driver/pay-line';
 import { Button, ErrorBox, Spinner, TripBadge, cn } from '@/components/ui';
 import { api } from '@/lib/api';
-import { ago, dayLong, fromIsoPY, hhmm, todayPY } from '@/lib/format';
+import { ago, dayLong, fromIsoPY, hhmm, returnLabel, todayPY } from '@/lib/format';
 import { useQuery } from '@/lib/use-query';
 import type { DriverPassenger, DriverTrip } from '@/lib/types';
 import { toast } from '@/store/toast';
@@ -56,6 +56,10 @@ function DriverTripPageInner() {
           <h1 className="text-xl font-bold">
             {trip.origin} › {trip.destination}
           </h1>
+          <p className="text-niebla">
+            Llega {hhmm(trip.arrivalTime)}
+            {trip.returnTime && <> · Retorno {returnLabel(trip.departureTime, trip.returnTime)}</>}
+          </p>
           <p className="text-niebla">
             {trip.busName} ({trip.busPlate})
           </p>

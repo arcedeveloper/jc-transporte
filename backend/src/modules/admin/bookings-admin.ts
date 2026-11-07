@@ -1,10 +1,14 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { addHours, min } from 'date-fns';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
-import { conflict, notFound } from '../../lib/http-error.js';
+import { env } from '../../config/env.js';
+import { MAX_PASSENGERS_PER_BOOKING, businessYear } from '../../config/business.js';
+import { badRequest, conflict, notFound } from '../../lib/http-error.js';
 import { IdParam } from '../../lib/validators.js';
-import { bookingInclude, cancelBooking } from '../bookings/bookings.service.js';
+import { docClean } from '../../lib/format.js';
+import { bookingInclude, cancelBooking, nextBookingCode } from '../bookings/bookings.service.js';
 import { emitPlaces, occupiedFor } from '../../lib/capacity.js';
 
 export const bookingsAdminRouter = Router();
@@ -107,6 +111,75 @@ bookingsAdminRouter.get('/:id', async (req, res) => {
   const booking = await prisma.booking.findUnique({ where: { id }, include: bookingInclude });
   if (!booking) throw notFound('Reserva no encontrada');
   res.json({ booking });
+});
+
+const phone = z
+  .string()
+  .trim()
+  .regex(/^\+?[\d\s-]{6,20}$/, 'Teléfono inválido');
+
+const ManualBooking = z.object({
+  tripId: z.uuid(),
+  contactPhone: phone,
+  /** true = ya pagó: queda confirmada y ocupa lugar enseguida */
+  paid: z.boolean(),
+  notes: z.string().trim().max(500).optional(),
+  passengers: z
+    .array(
+      z.object({
+        fullName: z.string().trim().min(3, 'Nombre muy corto').max(100),
+        document: z.string().trim().min(3, 'Escribí la cédula').max(20).transform(docClean),
+        phone: phone.optional(),
+      }),
+    )
+    .min(1, 'Agregá al menos un pasajero')
+    .max(MAX_PASSENGERS_PER_BOOKING, `Hasta ${MAX_PASSENGERS_PER_BOOKING} pasajeros por reserva`),
+});
+
+/**
+ * POST /api/admin/bookings → el admin carga una reserva a mano (cliente que reservó por teléfono o en persona).
+ * Funciona aunque el viaje esté "confirmado" (reservas cerradas); igual se respeta el cupo.
+ */
+bookingsAdminRouter.post('/', async (req, res) => {
+  const input = ManualBooking.parse(req.body);
+  const count = input.passengers.length;
+  const now = new Date();
+
+  const booking = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "Trip" WHERE id = ${input.tripId} FOR UPDATE`;
+    const trip = await tx.trip.findUnique({ where: { id: input.tripId }, include: { bus: { select: { capacity: true } } } });
+    if (!trip) throw notFound('Viaje no encontrado');
+    if (trip.status === 'cancelled' || trip.status === 'completed') throw badRequest('Este viaje ya terminó o fue cancelado');
+
+    const left = trip.bus.capacity - (await occupiedFor(trip.id, tx));
+    if (count > left) {
+      throw conflict(left <= 0 ? 'El viaje ya está completo' : `Quedan ${left} lugar(es) en este viaje`, 'NO_ROOM');
+    }
+
+    // Si no pagó todavía: el plazo normal, pero nunca menos de 1 hora
+    const deadline = min([addHours(now, env.PENDING_BOOKING_HOURS), trip.departureTime]);
+    const code = await nextBookingCode(tx, businessYear(now));
+    return tx.booking.create({
+      data: {
+        tripId: trip.id,
+        bookingCode: code,
+        contactPhone: input.contactPhone,
+        notes: input.notes ?? 'Cargada a mano por el admin',
+        numberOfPassengers: count,
+        totalAmount: trip.price * count,
+        status: input.paid ? 'confirmed' : 'pending',
+        confirmedAt: input.paid ? now : null,
+        paymentDeadline: input.paid ? now : deadline > addHours(now, 1) ? deadline : addHours(now, 1),
+        passengers: {
+          create: input.passengers.map((p) => ({ fullName: p.fullName, document: p.document, phone: p.phone || input.contactPhone })),
+        },
+      },
+      include: bookingInclude,
+    });
+  });
+
+  void emitPlaces(input.tripId);
+  res.status(201).json({ booking });
 });
 
 /** POST /api/admin/bookings/:id/confirm → el pago llegó */

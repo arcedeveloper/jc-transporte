@@ -4,11 +4,11 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, CalendarDays, Clock, Minus, Plus, Users } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Clock, FileDown, Minus, Plus, RotateCcw, Users } from 'lucide-react';
 import { z } from 'zod';
-import { ApiError, api, errorMessage } from '@/lib/api';
+import { ApiError, api, errorMessage, tripPdfUrl } from '@/lib/api';
 import { saveBooking } from '@/lib/browser';
-import { dayLong, docClean, docInput, duration, gs, hhmm } from '@/lib/format';
+import { dayLong, docClean, docInput, duration, gs, hhmm, returnLabel } from '@/lib/format';
 import { getPublicSocket, joinRoom } from '@/lib/socket';
 import type { PublicBooking, TripDetailResponse } from '@/lib/types';
 import { toast } from '@/store/toast';
@@ -199,8 +199,18 @@ export function BookingFlow({ tripId }: { tripId: string }) {
           <span className="flex items-center gap-1.5">
             <Clock className="size-4" aria-hidden /> Sale {hhmm(trip.departureTime)}, llega {hhmm(trip.arrivalTime)} ({duration(trip.durationMinutes)})
           </span>
+          {trip.returnTime && (
+            <span className="flex items-center gap-1.5">
+              <RotateCcw className="size-4" aria-hidden /> Retorno {returnLabel(trip.departureTime, trip.returnTime)}
+            </span>
+          )}
         </div>
         {trip.promo?.text && <p className="mt-3 whitespace-pre-line text-lg">{trip.promo.text}</p>}
+        {trip.pdf && (
+          <a href={tripPdfUrl(trip.pdf.id)} download={trip.pdf.fileName} className={cn(buttonClass('outline'), 'mt-4')}>
+            <FileDown className="size-5" aria-hidden /> Ver todo lo que incluye (PDF)
+          </a>
+        )}
       </div>
 
       {/* Lugares libres */}

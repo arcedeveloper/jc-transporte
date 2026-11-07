@@ -68,6 +68,7 @@ export function toPublicBooking(b: BookingFull, settings: Settings | null, maske
       destination: b.trip.route.destination,
       departureTime: b.trip.departureTime,
       arrivalTime: b.trip.arrivalTime,
+      returnTime: b.trip.returnTime,
     },
     passengers: b.passengers.map((p) => ({ fullName: masked ? shortName(p.fullName) : p.fullName })),
     payment: b.status === 'pending' ? paymentInfo(b.bookingCode, settings) : null,

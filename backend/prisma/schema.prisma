@@ -129,6 +129,8 @@ model Trip {
   driverId       String?
   departureTime  DateTime
   arrivalTime    DateTime
+  /// Hora en que el bus sale de vuelta (opcional)
+  returnTime     DateTime?
   price          Int // guaraníes por pasajero
   status         TripStatus @default(scheduled)
   /// "Viaje confirmado": el admin cerró las reservas (esté lleno o no)
@@ -147,12 +149,15 @@ model Trip {
   promoTitle     String?
   promoText      String?
   promoImageId   String?
+  /// PDF con los detalles del paquete (lo descarga el cliente)
+  pdfId          String?
   createdAt      DateTime   @default(now())
 
   bus           Bus            @relation(fields: [busId], references: [id])
   route         Route          @relation(fields: [routeId], references: [id])
   driver        User?          @relation("TripDriver", fields: [driverId], references: [id], onDelete: SetNull)
   promoImage    PromoImage?    @relation(fields: [promoImageId], references: [id], onDelete: SetNull)
+  pdf           TripPdf?       @relation(fields: [pdfId], references: [id], onDelete: SetNull)
   bookings      Booking[]
   groupRequests GroupRequest[]
   expenses      Expense[]
@@ -201,6 +206,16 @@ model Passenger {
 }
 
 /// Imagen de publicidad (se achica en el navegador). Varios viajes pueden usar la misma.
+/// PDF del paquete (membrete con todo lo que incluye el viaje)
+model TripPdf {
+  id        String   @id @default(uuid())
+  fileName  String
+  size      Int
+  data      Bytes
+  createdAt DateTime @default(now())
+  trips     Trip[]
+}
+
 model PromoImage {
   id        String   @id @default(uuid())
   mimeType  String
@@ -288,6 +303,7 @@ model Settings {
   /// Redes sociales: solo el usuario, sin @ (ej: jctransporte_py)
   instagram      String?
   tiktok         String?
+  facebook       String?
   /// Mensajes del cartel LED de la portada (además de las rutas)
   signMessages   String[] @default([])
   /// Si el cartel también muestra las rutas activas

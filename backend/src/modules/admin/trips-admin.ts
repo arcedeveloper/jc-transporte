@@ -18,16 +18,17 @@ const tripListInclude = {
   route: true,
   bus: { select: { id: true, name: true, plate: true, capacity: true } },
   driver: { select: { id: true, fullName: true } },
+  pdf: { select: { id: true, fileName: true } },
 } as const satisfies Prisma.TripInclude;
 
-/** Un bus no puede estar en dos viajes que se superponen. */
-async function assertBusFree(busId: string, dep: Date, arr: Date, excludeTripId?: string) {
+/** Un bus no puede estar en dos viajes que se superponen (desde la salida hasta la vuelta, si hay). */
+async function assertBusFree(busId: string, dep: Date, end: Date, excludeTripId?: string) {
   const clash = await prisma.trip.findFirst({
     where: {
       busId,
       status: { not: 'cancelled' },
-      departureTime: { lt: arr },
-      arrivalTime: { gt: dep },
+      departureTime: { lt: end },
+      OR: [{ returnTime: null, arrivalTime: { gt: dep } }, { returnTime: { gt: dep } }],
       ...(excludeTripId ? { id: { not: excludeTripId } } : {}),
     },
     include: { route: true },
@@ -38,6 +39,10 @@ async function assertBusFree(busId: string, dep: Date, arr: Date, excludeTripId?
       'BUS_BUSY',
     );
   }
+}
+
+async function assertPdf(pdfId: string | null | undefined) {
+  if (pdfId && !(await prisma.tripPdf.count({ where: { id: pdfId } }))) throw badRequest('PDF no encontrado');
 }
 
 async function assertDriver(driverId: string | null | undefined) {
@@ -117,6 +122,10 @@ const TripCreate = z.object({
   driverId: z.uuid().nullable().optional(),
   departureTime: z.coerce.date(),
   arrivalTime: z.coerce.date().optional(), // si no viene: salida + duración de la ruta
+  /** Hora de salida de vuelta (opcional) */
+  returnTime: z.coerce.date().nullable().optional(),
+  /** PDF del paquete ya subido (para usar el mismo en varios viajes) */
+  pdfId: z.uuid().nullable().optional(),
   price: z.number().int().positive().optional(), // si no viene: precio base de la ruta
   /** false = viaje privado (ej. grupal a medida): no sale en la portada */
   showOnHome: z.boolean().optional(),
@@ -136,7 +145,10 @@ tripsAdminRouter.post('/', async (req, res) => {
   const arrivalTime = data.arrivalTime ?? addMinutes(data.departureTime, route.durationMinutes);
   if (arrivalTime <= data.departureTime) throw badRequest('La llegada debe ser después de la salida');
   if (data.departureTime <= new Date()) throw badRequest('La salida debe ser en el futuro');
-  await assertBusFree(bus.id, data.departureTime, arrivalTime);
+  const returnTime = data.returnTime ?? null;
+  if (returnTime && returnTime <= arrivalTime) throw badRequest('El retorno debe ser después de la llegada');
+  await assertBusFree(bus.id, data.departureTime, returnTime ?? arrivalTime);
+  await assertPdf(data.pdfId);
 
   // La publicidad (imagen, formato y textos) se copia del último viaje de la misma ruta,
   // así no hay que subir la imagen cada vez.
@@ -145,6 +157,11 @@ tripsAdminRouter.post('/', async (req, res) => {
     orderBy: { createdAt: 'desc' },
     select: { promoImageId: true, promoLayout: true, promoTitle: true, promoText: true },
   });
+  // El PDF del paquete también se copia del último viaje de la ruta, si no se eligió otro
+  const lastPdf =
+    data.pdfId === undefined
+      ? await prisma.trip.findFirst({ where: { routeId: route.id, pdfId: { not: null } }, orderBy: { createdAt: 'desc' }, select: { pdfId: true } })
+      : null;
 
   const trip = await prisma.trip.create({
     data: {
@@ -153,9 +170,11 @@ tripsAdminRouter.post('/', async (req, res) => {
       driverId: data.driverId ?? null,
       departureTime: data.departureTime,
       arrivalTime,
+      returnTime,
       price: data.price ?? route.basePrice,
       showOnHome: data.showOnHome ?? true,
       ...(last ?? {}),
+      pdfId: data.pdfId !== undefined ? data.pdfId : (lastPdf?.pdfId ?? null),
     },
     include: tripListInclude,
   });
@@ -181,8 +200,11 @@ tripsAdminRouter.patch('/:id', async (req, res) => {
 
   const dep = data.departureTime ?? trip.departureTime;
   const arr = data.arrivalTime ?? trip.arrivalTime;
+  const ret = data.returnTime !== undefined ? data.returnTime : trip.returnTime;
   if (arr <= dep) throw badRequest('La llegada debe ser después de la salida');
-  await assertBusFree(data.busId ?? trip.busId, dep, arr, id);
+  if (ret && ret <= arr) throw badRequest('El retorno debe ser después de la llegada');
+  await assertBusFree(data.busId ?? trip.busId, dep, ret ?? arr, id);
+  await assertPdf(data.pdfId);
 
   const updated = await prisma.trip.update({ where: { id }, data, include: tripListInclude });
   void emitPlaces(id);
@@ -384,6 +406,27 @@ tripsAdminRouter.post('/:id/promo-image', async (req, res) => {
   const image = await prisma.promoImage.create({ data: { mimeType: mime!, data }, select: { id: true } });
   await prisma.trip.update({ where: { id }, data: { promoImageId: image.id } });
   res.status(201).json({ imageId: image.id });
+});
+
+const MAX_PDF_BYTES = 8 * 1024 * 1024;
+const PdfSchema = z.object({
+  dataUrl: z.string().regex(/^data:application\/pdf;base64,[A-Za-z0-9+/=]+$/, 'El archivo tiene que ser un PDF'),
+  fileName: z.string().trim().min(1).max(120),
+});
+
+/** POST /api/admin/trips/:id/pdf { dataUrl, fileName } → sube o reemplaza el PDF del paquete */
+tripsAdminRouter.post('/:id/pdf', async (req, res) => {
+  const { id } = IdParam.parse(req.params);
+  const { dataUrl, fileName } = PdfSchema.parse(req.body);
+  const data = Buffer.from(dataUrl.slice(dataUrl.indexOf(',') + 1), 'base64');
+  if (data.length > MAX_PDF_BYTES) throw badRequest('El PDF es muy pesado (máximo 8 MB)');
+  if (data.subarray(0, 4).toString() !== '%PDF') throw badRequest('El archivo no es un PDF válido');
+  const trip = await prisma.trip.findUnique({ where: { id }, select: { id: true } });
+  if (!trip) throw notFound('Viaje no encontrado');
+  const name = fileName.toLowerCase().endsWith('.pdf') ? fileName : `${fileName}.pdf`;
+  const pdf = await prisma.tripPdf.create({ data: { fileName: name, size: data.length, data }, select: { id: true } });
+  await prisma.trip.update({ where: { id }, data: { pdfId: pdf.id } });
+  res.status(201).json({ pdfId: pdf.id });
 });
 
 /** DELETE /api/admin/trips/:id/promo-image → saca la imagen (queda la tarjeta con el nombre del destino) */

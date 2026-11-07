@@ -23,9 +23,28 @@ const social = z
   })
   .refine((v) => !v || /^[A-Za-z0-9._]{1,40}$/.test(v), 'Usuario inválido: solo letras, números, punto y guion bajo');
 
+/**
+ * Facebook: "facebook.com/jctransporte", "https://www.facebook.com/profile.php?id=123" → "jctransporte" / "profile.php?id=123"
+ */
+const facebook = z
+  .string()
+  .trim()
+  .max(200)
+  .nullable()
+  .optional()
+  .transform((v) => {
+    if (!v) return null;
+    const rest = v.replace(/^(https?:\/\/)?(www\.|m\.|web\.)?(facebook\.com|fb\.com)\//i, '').replace(/^@/, '');
+    const id = /^profile\.php\?(?:.*&)?id=(\d+)/i.exec(rest)?.[1];
+    if (id) return `profile.php?id=${id}`;
+    return rest.split(/[/?#]/)[0] || null;
+  })
+  .refine((v) => !v || /^[A-Za-z0-9.\-_]{1,80}$/.test(v) || /^profile\.php\?id=\d+$/.test(v), 'Facebook inválido: pegá el link de la página');
+
 const SettingsSchema = z.object({
   instagram: social,
   tiktok: social,
+  facebook,
   bankName: z.string().trim().min(2).max(80),
   bankAccount: z.string().trim().min(3).max(40),
   bankHolder: z.string().trim().min(2).max(100),

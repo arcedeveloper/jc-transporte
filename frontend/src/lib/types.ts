@@ -68,11 +68,15 @@ export interface TripDetailResponse extends Availability {
     destination: string;
     departureTime: string;
     arrivalTime: string;
+    /** Hora de salida de vuelta (si el viaje tiene retorno) */
+    returnTime: string | null;
     durationMinutes: number;
     price: number;
     status: TripStatus;
     busName: string;
     bus: BusPublic;
+    /** PDF con los detalles del paquete */
+    pdf: { id: string; fileName: string } | null;
     /** Publicidad del viaje (imagen y textos que carga el admin) */
     promo?: TripPromo;
   };
@@ -97,7 +101,7 @@ export interface PublicBooking {
   createdAt: string;
   confirmedAt: string | null;
   cancelledAt: string | null;
-  trip: { id: string; origin: string; destination: string; departureTime: string; arrivalTime: string };
+  trip: { id: string; origin: string; destination: string; departureTime: string; arrivalTime: string; returnTime?: string | null };
   passengers: { fullName: string }[];
   payment: PaymentInfo | null;
 }
@@ -135,9 +139,12 @@ export interface AdminTrip {
   driverId: string | null;
   departureTime: string;
   arrivalTime: string;
+  returnTime: string | null;
   price: number;
   status: TripStatus;
   bookingClosed: boolean;
+  pdfId: string | null;
+  pdf: { id: string; fileName: string } | null;
   closedAt: string | null;
   currentLat: number | null;
   currentLng: number | null;
@@ -202,6 +209,7 @@ export interface Settings {
   adminEmail: string | null;
   instagram?: string | null;
   tiktok?: string | null;
+  facebook?: string | null;
   signMessages?: string[];
   signShowRoutes?: boolean;
   groupMinPeople?: number;
@@ -248,6 +256,7 @@ export interface DriverTrip {
   destination: string;
   departureTime: string;
   arrivalTime: string;
+  returnTime: string | null;
   status: TripStatus;
   busName: string;
   busPlate: string;

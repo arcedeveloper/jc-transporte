@@ -4,6 +4,8 @@ import { formatDateTime } from './format.js';
 
 interface ChecklistTrip {
   departureTime: Date;
+  arrivalTime: Date;
+  returnTime: Date | null;
   route: { origin: string; destination: string };
   bus: { name: string; plate: string };
   driver: { fullName: string } | null;
@@ -82,7 +84,13 @@ export async function buildChecklist(trip: ChecklistTrip) {
   title(2, `${trip.route.origin} › ${trip.route.destination}`, 13);
   title(
     3,
-    `Salida: ${formatDateTime(trip.departureTime)}   ·   Bus: ${trip.bus.name} (${trip.bus.plate})   ·   Chofer: ${trip.driver?.fullName ?? 'sin asignar'}`,
+    [
+      `Salida: ${formatDateTime(trip.departureTime)}`,
+      `Llegada: ${formatDateTime(trip.arrivalTime)}`,
+      ...(trip.returnTime ? [`Retorno: ${formatDateTime(trip.returnTime)}`] : []),
+      `Bus: ${trip.bus.name} (${trip.bus.plate})`,
+      `Chofer: ${trip.driver?.fullName ?? 'sin asignar'}`,
+    ].join('   ·   '),
     10,
     false,
     GREY,

@@ -3,14 +3,15 @@
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ArrowLeft, FileSpreadsheet, Lock, LockOpen, Pencil, Radio, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileDown, FileSpreadsheet, Lock, LockOpen, Pencil, Radio, Trash2, UserPlus } from 'lucide-react';
 import { Occupancy, Panel } from '@/components/admin/bits';
 import { ConfirmDelete } from '@/components/admin/confirm-delete';
+import { ManualBooking } from '@/components/admin/manual-booking';
 import { PromoPanel } from '@/components/admin/promo-panel';
 import { TripForm } from '@/components/admin/trip-form';
 import { BookingBadge, Button, ButtonLink, ErrorBox, Input, Modal, Select, Spinner, TripBadge, buttonClass, cn } from '@/components/ui';
-import { api, downloadFile, errorMessage } from '@/lib/api';
-import { dayLong, docFmt, gs, hhmm, waLink } from '@/lib/format';
+import { api, downloadFile, errorMessage, tripPdfUrl } from '@/lib/api';
+import { dayLong, docFmt, gs, hhmm, returnLabel, waLink } from '@/lib/format';
 import { msgCancelled } from '@/lib/whatsapp-messages';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { useQuery } from '@/lib/use-query';
@@ -44,6 +45,7 @@ function TripDetailPageInner() {
   const [drivers, setDrivers] = useState<AdminUser[]>([]);
   const [downloading, setDownloading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
   const router = useRouter();
 
   const trip = data?.trip;
@@ -129,7 +131,13 @@ function TripDetailPageInner() {
           </h1>
           <p className="text-lg">
             {dayLong(trip.departureTime)}, sale {hhmm(trip.departureTime)} y llega {hhmm(trip.arrivalTime)}
+            {trip.returnTime && <>, retorno {returnLabel(trip.departureTime, trip.returnTime)}</>}
           </p>
+          {trip.pdf && (
+            <a href={tripPdfUrl(trip.pdf.id)} className="mt-1 inline-flex items-center gap-1.5 text-sm font-bold text-ruta hover:underline">
+              <FileDown className="size-4" aria-hidden /> {trip.pdf.fileName}
+            </a>
+          )}
           <div className="mt-2 flex flex-wrap items-center gap-3 text-niebla">
             <TripBadge status={trip.status} />
             <span>
@@ -249,7 +257,16 @@ function TripDetailPageInner() {
         </div>
 
         <div className="space-y-6">
-          <Panel title={`Pasajeros (${passengers.length})`}>
+          <Panel
+            title={`Pasajeros (${passengers.length})`}
+            action={
+              (trip.status === 'scheduled' || trip.status === 'in_progress') && (
+                <Button variant="outline" size="sm" className="print:hidden" onClick={() => setManualOpen(true)}>
+                  <UserPlus className="size-4" /> Agregar pasajero
+                </Button>
+              )
+            }
+          >
             {passengers.length === 0 ? (
               <p className="text-niebla">Todavía no hay pasajeros.</p>
             ) : (
@@ -304,6 +321,15 @@ function TripDetailPageInner() {
           </Panel>
         </div>
       </div>
+
+      <ManualBooking
+        open={manualOpen}
+        onClose={() => setManualOpen(false)}
+        onSaved={() => void reload(true)}
+        tripId={trip.id}
+        price={trip.price}
+        left={Math.max(0, trip.bus.capacity - trip.occupied)}
+      />
 
       <TripForm open={editing} onClose={() => setEditing(false)} onSaved={() => void reload(true)} trip={trip} />
 

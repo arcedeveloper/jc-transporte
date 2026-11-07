@@ -20,6 +20,7 @@ const emptySettings: Settings = {
   adminEmail: '',
   instagram: '',
   tiktok: '',
+  facebook: '',
 };
 
 export default function SettingsAdmin() {
@@ -29,7 +30,7 @@ export default function SettingsAdmin() {
 
   useEffect(() => {
     if (data?.settings)
-      setForm({ ...emptySettings, ...data.settings, bankRuc: data.settings.bankRuc ?? '', bankAlias: data.settings.bankAlias ?? '', adminEmail: data.settings.adminEmail ?? '', instagram: data.settings.instagram ?? '', tiktok: data.settings.tiktok ?? '' });
+      setForm({ ...emptySettings, ...data.settings, bankRuc: data.settings.bankRuc ?? '', bankAlias: data.settings.bankAlias ?? '', adminEmail: data.settings.adminEmail ?? '', instagram: data.settings.instagram ?? '', tiktok: data.settings.tiktok ?? '', facebook: data.settings.facebook ?? '' });
   }, [data]);
 
   const set = (k: keyof Settings) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value });
@@ -41,7 +42,7 @@ export default function SettingsAdmin() {
       await api('/api/admin/settings', {
         method: 'PUT',
         auth: true,
-        body: { ...form, bankRuc: form.bankRuc || null, bankAlias: form.bankAlias || null, adminEmail: form.adminEmail || null, instagram: form.instagram || null, tiktok: form.tiktok || null },
+        body: { ...form, bankRuc: form.bankRuc || null, bankAlias: form.bankAlias || null, adminEmail: form.adminEmail || null, instagram: form.instagram || null, tiktok: form.tiktok || null, facebook: form.facebook || null },
       });
       toast.success('Datos guardados. Los próximos pasajeros ya los ven.');
       void reload(true);
@@ -84,6 +85,13 @@ export default function SettingsAdmin() {
               required
             />
             <Input label="Email de la empresa (opcional)" type="email" value={form.adminEmail ?? ''} onChange={set('adminEmail')} hint="Si lo cargás, aparece en el pie de página" />
+            <Input
+              label="Facebook (opcional)"
+              placeholder="facebook.com/jctransporte"
+              value={form.facebook ?? ''}
+              onChange={set('facebook')}
+              hint="Pegá el link de la página. Aparece en el pie de página."
+            />
             <Input
               label="Instagram (opcional)"
               placeholder="jctransporte_py"

@@ -31,7 +31,13 @@ async function cancelUnpaidBookings() {
 async function completeFinishedTrips() {
   const todayStart = businessDayRange(businessToday()).start;
   const trips = await prisma.trip.findMany({
-    where: { status: { in: ['scheduled', 'in_progress'] }, departureTime: { lt: todayStart }, arrivalTime: { lte: new Date() } },
+    where: {
+      status: { in: ['scheduled', 'in_progress'] },
+      departureTime: { lt: todayStart },
+      arrivalTime: { lte: new Date() },
+      // Si tiene vuelta, recién después de la medianoche del día de la vuelta
+      OR: [{ returnTime: null }, { returnTime: { lt: todayStart } }],
+    },
     select: { id: true },
   });
   if (!trips.length) return;
@@ -75,6 +81,10 @@ async function tidyUp() {
     where: { trips: { none: {} }, createdAt: { lt: new Date(Date.now() - 24 * 3600_000) } },
   });
   if (images.count) console.log(`🧹 ${images.count} imagen(es) de publicidad sin usar borradas`);
+  const pdfs = await prisma.tripPdf.deleteMany({
+    where: { trips: { none: {} }, createdAt: { lt: new Date(Date.now() - 24 * 3600_000) } },
+  });
+  if (pdfs.count) console.log(`🧹 ${pdfs.count} PDF(s) de paquetes sin usar borrados`);
 }
 
 export function startJobs() {

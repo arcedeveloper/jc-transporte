@@ -11,6 +11,8 @@ interface Info {
   /** Usuario de Instagram / TikTok sin @ */
   instagram: string | null;
   tiktok: string | null;
+  /** Página de Facebook ("jctransporte" o "profile.php?id=123") */
+  facebook: string | null;
   /** Mensajes del cartel LED (se editan en Admin → Ajustes) */
   signMessages: string[];
   signShowRoutes: boolean;
@@ -23,7 +25,7 @@ interface Info {
 
 type InfoResponse = Omit<Info, 'loaded'>;
 
-const useInfoStore = create<Info>()(() => ({ whatsapp: null, email: null, instagram: null, tiktok: null, signMessages: [], signShowRoutes: true, groupMinPeople: 12, groupMaxPeople: 17, groupMinDays: 5, loaded: false }));
+const useInfoStore = create<Info>()(() => ({ whatsapp: null, email: null, instagram: null, tiktok: null, facebook: null, signMessages: [], signShowRoutes: true, groupMinPeople: 12, groupMaxPeople: 17, groupMinDays: 5, loaded: false }));
 let requested = false;
 
 /** WhatsApp, email y cartel de la empresa (se piden una sola vez). */

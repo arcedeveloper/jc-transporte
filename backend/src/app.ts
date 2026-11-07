@@ -22,7 +22,7 @@ export function createApp() {
   app.use(cors({ origin: env.corsOrigins, credentials: true }));
   // Las fotos de los buses llegan en base64: solo esa ruta acepta pedidos grandes
   app.use('/api/admin/buses', express.json({ limit: '3mb' }));
-  app.use('/api/admin/trips', express.json({ limit: '3mb' })); // imagen de publicidad
+  app.use('/api/admin/trips', express.json({ limit: '12mb' })); // imagen de publicidad y PDF del paquete
   app.use(express.json({ limit: '100kb' }));
 
   // Health check liviano: lo usa cron-job.org para que Render no duerma.

@@ -5,6 +5,8 @@ export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:400
 /** URL pública de una foto de bus */
 export const busPhotoUrl = (id: string) => `${API_URL}/api/public/bus-photos/${id}`;
 export const promoImageUrl = (id: string) => `${API_URL}/api/public/promo-images/${id}`;
+/** Descarga del PDF del paquete */
+export const tripPdfUrl = (id: string) => `${API_URL}/api/public/trip-pdfs/${id}`;
 
 export class ApiError extends Error {
   constructor(

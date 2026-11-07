@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePath } from '@/lib/paths';
 import { Mail, Ticket } from 'lucide-react';
-import { FaInstagram, FaTiktok } from 'react-icons/fa';
+import { FaFacebook, FaInstagram, FaTiktok } from 'react-icons/fa';
 import { WhatsAppIcon } from './whatsapp-icon';
 import { waLink } from '@/lib/format';
 import { usePublicInfo } from './public-info';
@@ -43,7 +43,7 @@ export function SiteHeader() {
 }
 
 export function SiteFooter() {
-  const { whatsapp, email, instagram, tiktok } = usePublicInfo();
+  const { whatsapp, email, instagram, tiktok, facebook } = usePublicInfo();
   return (
     <footer className="mt-24 bg-ruta-dark text-white/80">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-3">
@@ -58,6 +58,13 @@ export function SiteFooter() {
               <li>
                 <a href={waLink(whatsapp)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-ambar">
                   <WhatsAppIcon className="size-5" aria-hidden /> WhatsApp
+                </a>
+              </li>
+            )}
+            {facebook && (
+              <li>
+                <a href={`https://www.facebook.com/${facebook}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-ambar">
+                  <FaFacebook className="size-5" aria-hidden /> Facebook
                 </a>
               </li>
             )}

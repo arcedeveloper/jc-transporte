@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CircleCheck, Trash2 } from 'lucide-react';
+import { CircleCheck } from 'lucide-react';
 import { BookingBadge, Button, Input, Modal, buttonClass, cn } from '@/components/ui';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { api, errorMessage } from '@/lib/api';
@@ -25,14 +25,12 @@ export function BookingDetail({
   const [busy, setBusy] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState('');
-  const [deleting, setDeleting] = useState(false);
   /** Después de confirmar o cancelar mostramos el botón para avisar por WhatsApp */
   const [done, setDone] = useState<Done | null>(null);
 
   useEffect(() => {
     if (booking) {
       setCancelling(false);
-      setDeleting(false);
       setReason('');
       setDone(null);
     }
@@ -79,24 +77,6 @@ export function BookingDetail({
       setBusy(null);
     }
   }
-
-  async function remove() {
-    if (!b) return;
-    setBusy('delete');
-    try {
-      await api(`/api/admin/bookings/${b.id}`, { method: 'DELETE', auth: true });
-      toast.success(`${b.bookingCode} borrada`);
-      onChanged();
-      close();
-    } catch (e) {
-      toast.error(errorMessage(e));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  /** Se puede borrar si está cancelada o si su viaje ya salió */
-  const canDelete = !!b && (b.status === 'cancelled' || new Date(b.trip.departureTime).getTime() < Date.now());
 
   const overdue = b?.status === 'pending' && new Date(b.paymentDeadline).getTime() < Date.now() + 2 * 3600_000;
 
@@ -218,30 +198,6 @@ export function BookingDetail({
                   Volver
                 </Button>
               </div>
-            </div>
-          )}
-
-          {!done && canDelete && !cancelling && (
-            <div className="border-t border-linea pt-5">
-              {!deleting ? (
-                <Button variant="ghost" size="sm" className="text-tierra hover:bg-tierra-50" onClick={() => setDeleting(true)}>
-                  <Trash2 className="size-4" /> Borrar reserva
-                </Button>
-              ) : (
-                <div className="space-y-3 rounded-2xl border-2 border-tierra/30 p-4">
-                  <p className="font-bold text-tierra">
-                    ¿Borrar {b.bookingCode} para siempre? Desaparece de la lista y de las estadísticas. No se puede deshacer.
-                  </p>
-                  <div className="flex gap-2">
-                    <Button variant="danger" loading={busy === 'delete'} onClick={() => void remove()}>
-                      Sí, borrar
-                    </Button>
-                    <Button variant="ghost" onClick={() => setDeleting(false)}>
-                      Volver
-                    </Button>
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
