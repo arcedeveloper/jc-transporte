@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { FileText, ImagePlus, X } from 'lucide-react';
 import { Button, Field, Input, Modal, NumberInput, Select, cn } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
-import { addDaysStr, fromIsoPY, numberToInput, parseNumber, toIsoPY, todayPY } from '@/lib/format';
+import { addDaysStr, dateStrLong, fromIsoPY, numberToInput, parseNumber, toIsoPY, todayPY } from '@/lib/format';
 import { resizeImage } from '@/lib/image';
-import type { AdminBus, AdminRoute, AdminTrip, AdminUser, PromoLayout } from '@/lib/types';
+import type { AdminBus, AdminRoute, AdminTrip, AdminUser, GroupRequest, PromoLayout, TimeSlot } from '@/lib/types';
 import { toast } from '@/store/toast';
 import { RouteInline } from './route-inline';
 
@@ -42,6 +42,15 @@ type Form = {
   promoText: string;
 };
 
+const SLOT_TIME: Record<TimeSlot, string> = { morning: '07:00', afternoon: '14:00', night: '19:00', any: '07:00' };
+const SLOT_LABEL: Record<TimeSlot, string> = { morning: 'mañana', afternoon: 'tarde', night: 'noche', any: 'les da igual' };
+const norm = (s: string) =>
+  s
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
 /**
  * Crear o editar un viaje. Al crear se hace todo de una vez:
  * ruta (existente o nueva), datos del viaje y publicidad para la portada (imagen, formato, textos).
@@ -51,6 +60,7 @@ export function TripForm({
   onClose,
   onSaved,
   trip,
+  group,
 }: {
   open: boolean;
   onClose: () => void;
@@ -58,6 +68,8 @@ export function TripForm({
   /** @deprecated ya no se usa: la publicidad se carga en el mismo formulario */
   onCreated?: (tripId: string) => void;
   trip?: AdminTrip | null;
+  /** Armar el viaje privado de un pedido grupal (se completa con los datos del pedido) */
+  group?: GroupRequest | null;
 }) {
   const [routes, setRoutes] = useState<AdminRoute[]>([]);
   const [buses, setBuses] = useState<AdminBus[]>([]);
@@ -103,20 +115,35 @@ export function TripForm({
             price: numberToInput(trip.price),
             showOnHome: trip.showOnHome,
           });
-        } else {
-          const first = activeRoutes[0];
+        } else if (group) {
+          // Viaje grupal: ruta del pedido (si no existe, se crea acá mismo), su fecha y un bus donde entren todos
+          const match = activeRoutes.find((x) => norm(x.origin) === norm(group.origin) && norm(x.destination) === norm(group.destination));
+          const bySize = [...activeBuses].sort((a, c) => a.capacity - c.capacity);
+          const bus = bySize.find((x) => x.capacity >= group.passengers) ?? bySize[bySize.length - 1];
           setForm({
             ...blank(),
-            routeId: first?.id ?? NEW_ROUTE,
+            routeId: match?.id ?? NEW_ROUTE,
+            origin: match ? '' : group.origin,
+            destination: match ? '' : group.destination,
+            busId: bus?.id ?? '',
+            driverId: d.users.find((u) => u.isActive)?.id ?? '',
+            date: group.date,
+            time: SLOT_TIME[group.preferredTime],
+            retDay: group.returnDate ? String(Math.max(0, Math.round((Date.parse(group.returnDate) - Date.parse(group.date)) / 86_400_000))) : '',
+            showOnHome: false,
+          });
+        } else {
+          setForm({
+            ...blank(),
+            routeId: activeRoutes[0]?.id ?? NEW_ROUTE,
             busId: activeBuses[0]?.id ?? '',
             driverId: d.users.find((u) => u.isActive)?.id ?? '',
             date: addDaysStr(todayPY(), 1),
-            price: first ? numberToInput(first.basePrice) : '',
           });
         }
       })
       .catch((e) => toast.error(errorMessage(e)));
-  }, [open, trip]);
+  }, [open, trip, group]);
 
   // Liberar la vista previa de la imagen
   useEffect(
@@ -134,9 +161,9 @@ export function TripForm({
   );
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
 
+  /** Elegir la ruta no cambia el precio: el precio se carga a mano en cada viaje */
   function setRoute(routeId: string) {
-    const r = routes.find((x) => x.id === routeId);
-    setForm((f) => ({ ...f, routeId, price: r ? numberToInput(r.basePrice) : f.price }));
+    setForm((f) => ({ ...f, routeId }));
   }
 
   function pickImage(file: File | undefined) {
@@ -321,6 +348,11 @@ export function TripForm({
         );
       }
       if (failures.length) toast.error(`No se pudieron crear ${failures.length}: ${failures[0]}`);
+      // Pedido grupal: el viaje queda unido al pedido para mandarle el enlace
+      if (group && created[0]) {
+        await api(`/api/admin/group-requests/${group.id}/trip`, { method: 'POST', auth: true, body: { tripId: created[0] } });
+        toast.success('Viaje armado. Ahora mandale el enlace por WhatsApp.');
+      }
       onSaved();
       if (created.length) onClose();
     } catch (err) {
@@ -333,11 +365,22 @@ export function TripForm({
   const routeLabel = isNewRoute ? `${form.origin.trim() || 'Origen'} › ${form.destination.trim() || 'Destino'}` : route ? `${route.origin} › ${route.destination}` : '';
 
   return (
-    <Modal open={open} onClose={onClose} title={trip ? 'Editar viaje' : 'Nuevo viaje'}>
+    <Modal open={open} onClose={onClose} title={trip ? 'Editar viaje' : group ? 'Armar el viaje del grupo' : 'Nuevo viaje'}>
       {buses.length === 0 ? (
         <p className="text-niebla">Primero cargá al menos un bus activo en Ajustes → Buses.</p>
       ) : (
         <form onSubmit={save} className="space-y-4">
+          {group && (
+            <p className="rounded-xl bg-papel p-3">
+              <strong>
+                {group.origin} › {group.destination}
+              </strong>
+              <br />
+              {dateStrLong(group.date)}
+              {group.returnDate && <>, vuelven el {dateStrLong(group.returnDate).toLowerCase()}</>}. {group.passengers} personas, prefieren{' '}
+              {SLOT_LABEL[group.preferredTime]}.
+            </p>
+          )}
           {/* ---------- Ruta ---------- */}
           <div>
           {trip ? (
@@ -362,7 +405,6 @@ export function TripForm({
               route={route}
               onUpdated={(r) => {
                 setRoutes((list) => list.map((x) => (x.id === r.id ? r : x)));
-                setForm((f) => ({ ...f, price: numberToInput(r.basePrice) }));
               }}
               onDeleted={(id) => {
                 const rest = routes.filter((x) => x.id !== id);
@@ -460,12 +502,15 @@ export function TripForm({
           </div>
           <NumberInput
             label="Precio por pasajero (Gs.)"
-            placeholder="120.000"
+            placeholder="Ej: 120.000"
             value={form.price}
             onValueChange={(v) => set('price', v)}
             hint={route ? `Llega en ${Math.round(route.durationMinutes / 6) / 10} h aprox.` : undefined}
           />
-          {!trip && (
+          {group && (buses.find((b) => b.id === form.busId)?.capacity ?? 0) < group.passengers && (
+            <p className="text-sm font-bold text-tierra">Ojo: el grupo es de {group.passengers} y el bus elegido tiene menos lugares.</p>
+          )}
+          {!trip && !group && (
             <Input
               label="Crear para cuántos días seguidos"
               type="number"
@@ -510,8 +555,8 @@ export function TripForm({
             )}
           </Field>
 
-          {/* ---------- Publicidad ---------- */}
-          {!trip && (
+          {/* ---------- Publicidad (los viajes grupales son privados: no van en la portada) ---------- */}
+          {!trip && !group && (
             <div className="rounded-xl border-2 border-linea p-3">
               <label className="flex cursor-pointer items-center gap-3">
                 <input
@@ -615,8 +660,9 @@ export function TripForm({
           )}
 
           <Button type="submit" size="lg" className="w-full" loading={saving}>
-            {trip ? 'Guardar cambios' : form.showOnHome ? 'Crear y publicar viaje' : 'Crear viaje'}
+            {trip ? 'Guardar cambios' : group ? 'Armar viaje privado' : form.showOnHome ? 'Crear y publicar viaje' : 'Crear viaje'}
           </Button>
+          {group && <p className="text-sm text-niebla">No aparece en la portada. Solo entra quien tenga el enlace.</p>}
         </form>
       )}
     </Modal>

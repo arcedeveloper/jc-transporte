@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
-import { Button, Input, NumberInput } from '@/components/ui';
+import { Button, Input } from '@/components/ui';
 import { ApiError, api, errorMessage } from '@/lib/api';
-import { numberToInput, parseNumber } from '@/lib/format';
 import type { AdminRoute } from '@/lib/types';
 import { toast } from '@/store/toast';
 
@@ -22,7 +21,7 @@ export function RouteInline({
   onDeleted: (id: string) => void;
 }) {
   const [mode, setMode] = useState<'idle' | 'edit' | 'delete'>('idle');
-  const [form, setForm] = useState({ origin: '', destination: '', hours: '', minutes: '', price: '' });
+  const [form, setForm] = useState({ origin: '', destination: '', hours: '', minutes: '' });
   const [busy, setBusy] = useState(false);
   const [warning, setWarning] = useState<{ text: string; canForce: boolean } | null>(null);
 
@@ -32,7 +31,6 @@ export function RouteInline({
       destination: route.destination,
       hours: String(Math.floor(route.durationMinutes / 60)),
       minutes: String(route.durationMinutes % 60),
-      price: numberToInput(route.basePrice),
     });
     setMode('edit');
   }
@@ -46,7 +44,7 @@ export function RouteInline({
       const r = await api<{ route: AdminRoute }>(`/api/admin/routes/${route.id}`, {
         method: 'PATCH',
         auth: true,
-        body: { origin: form.origin.trim(), destination: form.destination.trim(), durationMinutes, basePrice: parseNumber(form.price) || route.basePrice },
+        body: { origin: form.origin.trim(), destination: form.destination.trim(), durationMinutes },
       });
       toast.success('Ruta actualizada');
       onUpdated({ ...route, ...r.route });
@@ -97,12 +95,10 @@ export function RouteInline({
           <Input label="Origen" value={form.origin} onChange={(e) => setForm({ ...form, origin: e.target.value })} />
           <Input label="Destino" value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} />
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <Input label="Horas" type="number" min={0} value={form.hours} onChange={(e) => setForm({ ...form, hours: e.target.value })} />
           <Input label="Minutos" type="number" min={0} max={59} value={form.minutes} onChange={(e) => setForm({ ...form, minutes: e.target.value })} />
-          <NumberInput label="Precio base" value={form.price} onValueChange={(v) => setForm({ ...form, price: v })} />
         </div>
-        <p className="text-xs text-niebla">Los cambios valen para los viajes nuevos. Los ya creados mantienen su precio.</p>
         <div className="flex gap-2">
           <Button size="sm" loading={busy} onClick={() => void save()}>
             Guardar ruta

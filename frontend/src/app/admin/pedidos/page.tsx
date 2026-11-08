@@ -1,31 +1,24 @@
 'use client';
 
 import { siteUrl } from '@/lib/paths';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { CalendarPlus, Check, Copy, Trash2, Undo2, Users } from 'lucide-react';
 import { PageTitle, Tabs } from '@/components/admin/bits';
 import { ConfirmDelete } from '@/components/admin/confirm-delete';
-import { Button, Empty, ErrorBox, Input, Modal, NumberInput, Select, Spinner, buttonClass, cn } from '@/components/ui';
+import { TripForm } from '@/components/admin/trip-form';
+import { Button, Empty, ErrorBox, Spinner, buttonClass, cn } from '@/components/ui';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { api, errorMessage } from '@/lib/api';
-import { ago, dateStrLong, dateTime, docFmt, gs, numberToInput, parseNumber, toIsoPY, waLink } from '@/lib/format';
+import { ago, dateStrLong, dateTime, docFmt, gs, waLink } from '@/lib/format';
 import { useQuery } from '@/lib/use-query';
 import { msgGroupDismissed, msgGroupReady } from '@/lib/whatsapp-messages';
-import type { AdminBus, AdminRoute, AdminUser, GroupRequest, GroupRequestStatus, TimeSlot } from '@/lib/types';
+import type { GroupRequest, GroupRequestStatus, TimeSlot } from '@/lib/types';
 import { toast } from '@/store/toast';
 
 type Tab = 'open' | 'accepted' | 'dismissed';
 
 const SLOT_LABEL: Record<TimeSlot, string> = { morning: 'Mañana', afternoon: 'Tarde', night: 'Noche', any: 'Le da igual' };
-const SLOT_TIME: Record<TimeSlot, string> = { morning: '07:00', afternoon: '14:00', night: '19:00', any: '07:00' };
-
-const norm = (s: string) =>
-  s
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '');
 
 const dateLabel = (d: string) => dateStrLong(d).toLowerCase();
 
@@ -97,11 +90,11 @@ export default function GroupRequestsAdmin() {
         )}
       </div>
 
-      <BuildTripModal
-        request={building}
+      <TripForm
+        open={!!building}
+        group={building}
         onClose={() => setBuilding(null)}
-        onDone={() => {
-          setBuilding(null);
+        onSaved={() => {
           setTab('accepted');
           void reload(true);
         }}
@@ -263,149 +256,5 @@ function RequestCard({
         </button>
       </div>
     </section>
-  );
-}
-
-/** Armar el viaje del grupo: ruta (sugerida por nombre), hora, bus donde entran todos, chofer y precio. Se crea privado. */
-function BuildTripModal({ request: r, onClose, onDone }: { request: GroupRequest | null; onClose: () => void; onDone: () => void }) {
-  const [routes, setRoutes] = useState<AdminRoute[]>([]);
-  const [buses, setBuses] = useState<AdminBus[]>([]);
-  const [drivers, setDrivers] = useState<AdminUser[]>([]);
-  const [form, setForm] = useState({ routeId: '', date: '', time: '07:00', busId: '', driverId: '', price: '' });
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!r) return;
-    void Promise.all([
-      api<{ routes: AdminRoute[] }>('/api/admin/routes', { auth: true }),
-      api<{ buses: AdminBus[] }>('/api/admin/buses', { auth: true }),
-      api<{ users: AdminUser[] }>('/api/admin/users?role=driver', { auth: true }),
-    ])
-      .then(([ro, b, d]) => {
-        const activeRoutes = ro.routes.filter((x) => x.isActive);
-        const activeBuses = b.buses.filter((x) => x.isActive).sort((a, c) => a.capacity - c.capacity);
-        const activeDrivers = d.users.filter((u) => u.isActive);
-        setRoutes(activeRoutes);
-        setBuses(activeBuses);
-        setDrivers(activeDrivers);
-        const match = activeRoutes.find((x) => norm(x.origin) === norm(r.origin) && norm(x.destination) === norm(r.destination));
-        const bus = activeBuses.find((x) => x.capacity >= r.passengers) ?? activeBuses[activeBuses.length - 1];
-        setForm({
-          routeId: match?.id ?? '',
-          date: r.date,
-          time: SLOT_TIME[r.preferredTime],
-          busId: bus?.id ?? '',
-          driverId: activeDrivers[0]?.id ?? '',
-          price: match ? numberToInput(match.basePrice) : '',
-        });
-      })
-      .catch((e) => toast.error(errorMessage(e)));
-  }, [r]);
-
-  const route = routes.find((x) => x.id === form.routeId);
-  const bus = buses.find((x) => x.id === form.busId);
-
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
-    if (!r) return;
-    const price = parseNumber(form.price);
-    if (!form.routeId || !form.busId || !form.date || !price) return toast.error('Completá ruta, fecha, bus y precio');
-    setSaving(true);
-    try {
-      const t = await api<{ trip: { id: string } }>('/api/admin/trips', {
-        method: 'POST',
-        auth: true,
-        body: {
-          routeId: form.routeId,
-          busId: form.busId,
-          driverId: form.driverId || null,
-          departureTime: toIsoPY(form.date, form.time),
-          price,
-          showOnHome: false,
-        },
-      });
-      await api(`/api/admin/group-requests/${r.id}/trip`, { method: 'POST', auth: true, body: { tripId: t.trip.id } });
-      toast.success('Viaje armado. Ahora mandale el enlace por WhatsApp.');
-      onDone();
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <Modal open={!!r} onClose={onClose} title="Armar el viaje del grupo">
-      {r && (
-        <form onSubmit={save} className="space-y-4">
-          <p className="rounded-xl bg-papel p-3">
-            <strong>
-              {r.origin} › {r.destination}
-            </strong>
-            <br />
-            {dateStrLong(r.date)}, {r.passengers} personas, prefieren {SLOT_LABEL[r.preferredTime].toLowerCase()}
-          </p>
-          <Select
-            label="Ruta"
-            value={form.routeId}
-            onChange={(e) => {
-              const ro = routes.find((x) => x.id === e.target.value);
-              setForm({ ...form, routeId: e.target.value, price: ro ? numberToInput(ro.basePrice) : form.price });
-            }}
-          >
-            <option value="">Elegí la ruta…</option>
-            {routes.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.origin} › {x.destination}
-              </option>
-            ))}
-          </Select>
-          {!route && (
-            <p className="text-sm text-niebla">
-              ¿No está? Creala en{' '}
-              <Link href="/admin/rutas" className="font-bold text-ruta underline">
-                Rutas
-              </Link>{' '}
-              ({r.origin} › {r.destination}) y volvé.
-            </p>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Fecha" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
-            <Input label="Hora de salida" type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} required />
-          </div>
-          <Select label="Bus" value={form.busId} onChange={(e) => setForm({ ...form, busId: e.target.value })}>
-            {buses.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name} ({b.capacity} lugares)
-              </option>
-            ))}
-          </Select>
-          {bus && bus.capacity < r.passengers && (
-            <p className="text-sm font-bold text-tierra">
-              Ojo: el grupo es de {r.passengers} y este bus tiene {bus.capacity} lugares.
-            </p>
-          )}
-          <Select label="Chofer" value={form.driverId} onChange={(e) => setForm({ ...form, driverId: e.target.value })}>
-            <option value="">Sin asignar</option>
-            {drivers.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.fullName}
-              </option>
-            ))}
-          </Select>
-          <NumberInput
-            label="Precio por persona (Gs.)"
-            placeholder="150.000"
-            value={form.price}
-            onValueChange={(v) => setForm({ ...form, price: v })}
-            hint={route ? `Precio de la ruta: ${gs(route.basePrice)}` : undefined}
-          />
-          <Button type="submit" size="lg" className="w-full" loading={saving}>
-            <CalendarPlus className="size-5" /> Armar viaje privado
-          </Button>
-          <p className="text-sm text-niebla">No aparece en la portada. Solo entra quien tenga el enlace.</p>
-        </form>
-      )}
-    </Modal>
   );
 }
