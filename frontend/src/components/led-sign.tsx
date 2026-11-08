@@ -15,7 +15,7 @@ export function LedSign({ lines, className, size = 'lg' }: { lines: string[]; cl
 
   useEffect(() => {
     if (list.length < 2) return;
-    const t = setInterval(() => setI((x) => (x + 1) % list.length), 3600);
+    const t = setInterval(() => setI((x) => (x + 1) % list.length), 2600);
     return () => clearInterval(t);
   }, [list.length]);
 
