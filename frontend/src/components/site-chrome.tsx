@@ -124,7 +124,7 @@ export function SiteFooter() {
       </div>
             <div className="border-t border-white/10 py-9 text-center text-sm text-white/50">
         <p>© {new Date().getFullYear()} JC Transporte</p>
-        <p className="mt-1">Creado por César Matías Rodas Arce</p>
+        <p className="mt-1">Desarrolado por César Matías Rodas Arce. Todos los derechos reservados.</p>
       </div>
     </footer>
   );
