@@ -61,7 +61,7 @@ export function Hero() {
         aria-hidden
         className="absolute inset-0 -z-10 size-full scale-105 object-cover object-[30%_center]"
       />
-      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-ruta/80 via-ruta/75 to-ruta/95" aria-hidden />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-ruta/70 via-ruta/60 to-ruta/90" aria-hidden />
       <div className="mx-auto max-w-6xl px-4">
         <div className="mx-auto max-w-3xl text-center">
           <LedSign lines={lines} />

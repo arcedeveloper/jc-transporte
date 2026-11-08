@@ -77,7 +77,8 @@ export function waNumber(phone: string) {
 }
 
 export const waLink = (phone: string, text?: string) =>
-  `https://wa.me/${waNumber(phone)}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
+  // api.whatsapp.com directo (sin pasar por wa.me): la redirección de wa.me rompe algunos emojis en la compu
+  `https://api.whatsapp.com/send?phone=${waNumber(phone)}${text ? `&text=${encodeURIComponent(text)}` : ''}`;
 
 /** Para inputs datetime: "2026-10-25" + "07:30" → ISO en hora de Paraguay */
 export const toIsoPY = (date: string, time: string) => new Date(`${date}T${time}:00-03:00`).toISOString();
