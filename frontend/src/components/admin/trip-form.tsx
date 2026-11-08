@@ -44,13 +44,6 @@ type Form = {
 
 const SLOT_TIME: Record<TimeSlot, string> = { morning: '07:00', afternoon: '14:00', night: '19:00', any: '07:00' };
 const SLOT_LABEL: Record<TimeSlot, string> = { morning: 'mañana', afternoon: 'tarde', night: 'noche', any: 'les da igual' };
-const norm = (s: string) =>
-  s
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-
 /**
  * Crear o editar un viaje. Al crear se hace todo de una vez:
  * ruta (existente o nueva), datos del viaje y publicidad para la portada (imagen, formato, textos).
