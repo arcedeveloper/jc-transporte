@@ -25,7 +25,7 @@ export function LedSign({ lines, className, size = 'lg' }: { lines: string[]; cl
     <div
       className={cn(
         'relative overflow-hidden rounded-xl border-4 border-[#050d17] bg-[#0a1726] shadow-[inset_0_2px_12px_rgb(0_0_0/0.6)]',
-        size === 'lg' ? 'h-20 sm:h-24' : 'h-14',
+        size === 'lg' ? 'h-20 sm:h-28' : 'h-14',
         className,
       )}
       role="img"
@@ -36,7 +36,7 @@ export function LedSign({ lines, className, size = 'lg' }: { lines: string[]; cl
           key={text}
           className={cn(
             'led-text absolute inset-0 flex items-center justify-center whitespace-nowrap px-4 font-display font-bold uppercase',
-            size === 'lg' ? 'text-3xl tracking-wide sm:text-5xl' : 'text-2xl tracking-wide',
+            size === 'lg' ? 'text-3xl sm:text-6xl' : 'text-2xl',
           )}
           initial={reduce ? { opacity: 0 } : { y: '100%' }}
           animate={reduce ? { opacity: 1 } : { y: 0 }}

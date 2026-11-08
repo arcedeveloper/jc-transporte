@@ -435,18 +435,28 @@ export function TripForm({
             <p className="-mt-2 text-sm text-niebla">Si dejás la llegada vacía, se calcula con la duración de la ruta.</p>
           )}
           <div className="grid grid-cols-2 gap-3">
-            <Select label="Retorno" value={form.retDay} onChange={(e) => set('retDay', e.target.value)}>
+            <Select
+              label="Retorno"
+              value={form.retDay}
+              onChange={(e) => setForm((f) => ({ ...f, retDay: e.target.value, retTime: e.target.value === '' ? '' : f.retTime }))}
+            >
               <option value="">Sin retorno</option>
               <option value="0">El mismo día</option>
               <option value="1">Al día siguiente</option>
-              <option value="2">2 días después</option>
-              <option value="3">3 días después</option>
-              <option value="4">4 días después</option>
-              <option value="5">5 días después</option>
+              {Array.from({ length: Math.max(14, Number(form.retDay) || 0) - 1 }, (_, i) => i + 2).map((n) => (
+                <option key={n} value={String(n)}>
+                  {n} días después
+                </option>
+              ))}
             </Select>
-            {form.retDay !== '' && (
-              <Input label="Hora del retorno" type="time" value={form.retTime} onChange={(e) => set('retTime', e.target.value)} />
-            )}
+            <Input
+              label="Hora del retorno"
+              type="time"
+              value={form.retTime}
+              disabled={form.retDay === ''}
+              onChange={(e) => set('retTime', e.target.value)}
+              hint={form.retDay === '' ? 'Elegí primero el día del retorno.' : undefined}
+            />
           </div>
           <NumberInput
             label="Precio por pasajero (Gs.)"

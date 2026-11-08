@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ChevronDown, MapPin, Radio, ShieldCheck, Users } from 'lucide-react';
 import { api } from '@/lib/api';
 import { onDataChanged } from '@/lib/socket';
+import { BASE_PATH } from '@/lib/paths';
 import type { FeaturedTrip, RouteOption } from '@/lib/types';
 import { LedSign } from './led-sign';
 import { usePublicInfo } from './public-info';
@@ -51,7 +52,16 @@ export function Hero() {
   }, []);
 
   return (
-    <section className="relative bg-ruta pb-16 pt-8 sm:pb-20 sm:pt-12">
+    <section className="relative isolate overflow-hidden bg-ruta pb-16 pt-8 sm:pb-20 sm:pt-12">
+      {/* Foto del bus de fondo, borrosa y oscurecida para que el texto se lea */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`${BASE_PATH}/hero-bus.jpg`}
+        alt=""
+        aria-hidden
+        className="absolute inset-0 -z-10 size-full scale-105 object-cover object-[30%_center]"
+      />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-ruta/80 via-ruta/75 to-ruta/95" aria-hidden />
       <div className="mx-auto max-w-6xl px-4">
         <div className="mx-auto max-w-3xl text-center">
           <LedSign lines={lines} />
