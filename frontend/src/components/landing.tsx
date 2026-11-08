@@ -64,7 +64,7 @@ export function Hero() {
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-ruta/70 via-ruta/60 to-ruta/90" aria-hidden />
       <div className="mx-auto max-w-6xl px-4">
         <div className="mx-auto max-w-3xl text-center">
-          <LedSign lines={lines} />
+          <LedSign lines={lines} className="mx-auto max-w-xl" />
           <h1 className="mt-8 text-balance font-display text-5xl font-bold leading-[0.95] text-white sm:text-7xl">
             Tu lugar, reservado desde tu comodidad.
           </h1>

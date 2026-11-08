@@ -159,11 +159,11 @@ export function GroupRequestForm() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
-      <p className="flex items-center gap-2 font-bold text-ambar-dark">
+      <p className="flex items-center justify-center gap-2 font-bold text-ambar-dark">
         <Users className="size-5" aria-hidden /> Viaje grupal personalizado
       </p>
-      <h1 className="font-display text-5xl font-bold leading-none text-ruta">Armamos el viaje de tu grupo</h1>
-      <p className="mt-3 max-w-prose text-lg text-niebla">
+      <h1 className="text-balance text-center font-display text-5xl font-bold leading-none text-ruta">Armamos el viaje de tu grupo</h1>
+      <p className="mx-auto mt-3 max-w-prose text-center text-lg text-niebla">
         Ustedes eligen a dónde van y qué día. Nosotros ponemos el bus y el chofer.
       </p>
 
