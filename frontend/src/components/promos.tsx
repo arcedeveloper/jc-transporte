@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, CalendarDays, Sparkles, Users } from 'lucide-react';
@@ -8,7 +9,7 @@ import { dateTime, gs } from '@/lib/format';
 import { useQuery } from '@/lib/use-query';
 import type { FeaturedTrip, PromoLayout } from '@/lib/types';
 import { usePublicInfo } from './public-info';
-import { Spinner, cn } from './ui';
+import { Button, Spinner, cn } from './ui';
 
 /**
  * Imagen de publicidad: se ve entera (no se recorta el logo ni el texto del flyer).
@@ -153,10 +154,33 @@ function GroupCard({ i }: { i: number }) {
   );
 }
 
+/** Reintentos automáticos (cada 5 s) mientras el servidor despierta */
+const MAX_TRIES = 10;
+
 /** Portada: los viajes publicados (como publicidad) y al final el viaje grupal. */
 export function FeaturedTrips() {
-  const { data, loading } = useQuery(() => api<{ trips: FeaturedTrip[] }>('/api/trips/featured'), [], { live: true });
+  const { data, error, loading, reload } = useQuery(() => api<{ trips: FeaturedTrip[] }>('/api/trips/featured'), [], { live: true });
   const trips = data?.trips ?? [];
+
+  // Si el servidor estaba dormido tarda unos segundos en despertar: avisamos y reintentamos solos
+  const [slow, setSlow] = useState(false);
+  const [tries, setTries] = useState(0);
+  useEffect(() => {
+    if (!loading) return;
+    const t = setTimeout(() => setSlow(true), 3000);
+    return () => clearTimeout(t);
+  }, [loading]);
+  useEffect(() => {
+    if (!error || tries >= MAX_TRIES) return;
+    const t = setTimeout(() => {
+      setTries((n) => n + 1);
+      void reload();
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [error, tries, reload]);
+
+  const waiting = loading || (!!error && tries < MAX_TRIES);
+  const failed = !!error && !waiting;
   return (
     <section id="salidas" className="mx-auto max-w-6xl scroll-mt-6 px-4" aria-labelledby="salidas-title">
       <p className="flex items-center justify-center gap-2 font-bold text-ambar-dark">
@@ -168,8 +192,27 @@ export function FeaturedTrips() {
       <p className="mx-auto mt-2 max-w-2xl text-center text-niebla">
         Tocá una salida, reservá tu lugar y pagá. Te confirmamos por WhatsApp.
       </p>
-      {loading ? (
-        <Spinner label="Cargando salidas…" />
+      {waiting ? (
+        <div className="text-center">
+          <Spinner label="Cargando salidas…" />
+          {(slow || error) && (
+            <p className="-mt-10 pb-6 text-sm text-niebla">Estamos preparando las salidas, puede tardar unos segundos. No cierres la página.</p>
+          )}
+        </div>
+      ) : failed ? (
+        <div className="mt-6 rounded-2xl border-2 border-dashed border-linea p-6 text-center">
+          <p className="font-bold">No pudimos cargar las salidas.</p>
+          <p className="mt-1 text-niebla">Revisá tu conexión e intentá de nuevo.</p>
+          <Button
+            className="mt-4"
+            onClick={() => {
+              setTries(0);
+              void reload();
+            }}
+          >
+            Reintentar
+          </Button>
+        </div>
       ) : (
         <ul className="mt-6 grid grid-flow-row-dense gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {trips.map((t, i) => (
@@ -178,7 +221,7 @@ export function FeaturedTrips() {
           <GroupCard i={trips.length} />
         </ul>
       )}
-      {!loading && trips.length === 0 && (
+      {!waiting && !failed && trips.length === 0 && (
         <p className="mt-4 text-center text-niebla">Pronto publicamos nuevas salidas. Mientras tanto, podés pedir un viaje para tu grupo o dejarnos una sugerencia.</p>
       )}
     </section>
