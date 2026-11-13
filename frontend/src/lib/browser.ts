@@ -60,6 +60,12 @@ export function saveBooking(b: SavedBooking) {
   safeSet('jc-bookings', JSON.stringify([b, ...list].slice(0, 20)));
 }
 
+/** Olvida reservas que ya no existen (por ejemplo, si se borró el viaje) */
+export function forgetBookings(codes: string[]) {
+  if (!codes.length) return;
+  safeSet('jc-bookings', JSON.stringify(getSavedBookings().filter((x) => !codes.includes(x.code))));
+}
+
 export async function copyText(text: string) {
   try {
     await navigator.clipboard.writeText(text);

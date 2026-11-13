@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronRight, Search } from 'lucide-react';
-import { getSavedBookings, type SavedBooking } from '@/lib/browser';
+import { ApiError, api } from '@/lib/api';
+import { forgetBookings, getSavedBookings, type SavedBooking } from '@/lib/browser';
 import { dateTime } from '@/lib/format';
 import { Button, Input } from './ui';
 
@@ -15,7 +16,21 @@ export function MyBookings({ initialCode }: { initialCode: string }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setSaved(getSavedBookings());
+    const list = getSavedBookings();
+    setSaved(list);
+    // Las reservas borradas (por ejemplo, con su viaje) desaparecen solas de la lista
+    void Promise.all(
+      list.map((b) =>
+        api(`/api/bookings/${encodeURIComponent(b.code)}?tel=${encodeURIComponent(b.phone)}`)
+          .then(() => null)
+          .catch((e) => (e instanceof ApiError && e.status === 404 ? b.code : null)),
+      ),
+    ).then((gone) => {
+      const codes = gone.filter((c): c is string => !!c);
+      if (!codes.length) return;
+      forgetBookings(codes);
+      setSaved((prev) => prev.filter((b) => !codes.includes(b.code)));
+    });
   }, []);
 
   function submit(e: React.FormEvent) {
