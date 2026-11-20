@@ -42,7 +42,7 @@ export default function LiveOverview() {
     <>
       <PageTitle title="Buses en viaje" />
       {live.length === 0 ? (
-        <Empty title="Ningún bus está en viaje ahora">
+        <Empty title="Ningún vehiculo está en viaje ahora">
           <p>Cuando un chofer toque “Compartir ubicación”, el bus aparece acá.</p>
         </Empty>
       ) : (
