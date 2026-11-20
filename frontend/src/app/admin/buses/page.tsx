@@ -93,11 +93,11 @@ export default function BusesAdmin() {
     <>
       <PageTitle title="Buses">
         <Button onClick={() => open('new')}>
-          <Plus className="size-5" aria-hidden /> Agregar bus
+          <Plus className="size-5" aria-hidden /> Agregar Vehiculo
         </Button>
       </PageTitle>
       <p className="-mt-3 mb-5 max-w-prose text-niebla">
-        Cada viaje usa un bus. Los <strong>lugares</strong> son los pasajeros que se venden por viaje. Las fotos y la descripción las ven los pasajeros
+        Cada viaje usa un vehiculo. Los <strong>lugares</strong> son los pasajeros que se venden por viaje. Las fotos y la descripción las ven los pasajeros
         al elegir el horario.
       </p>
 
@@ -144,7 +144,7 @@ export default function BusesAdmin() {
         </div>
       )}
 
-      <Modal open={editing !== null} onClose={() => setEditing(null)} title={editing === 'new' ? 'Agregar bus' : 'Editar bus'}>
+      <Modal open={editing !== null} onClose={() => setEditing(null)} title={editing === 'new' ? 'Agregar vehiculo' : 'Editar vehiculo'}>
         <form onSubmit={save} className="space-y-4">
           <Input label="Nombre" placeholder="Bus 2" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           <Input label="Chapa" placeholder="ABC 123" value={form.plate} onChange={(e) => setForm({ ...form, plate: e.target.value })} required />
@@ -204,7 +204,7 @@ export default function BusesAdmin() {
             </Field>
           )}
           <Button type="submit" size="lg" className="w-full" loading={saving}>
-            Guardar bus
+            Guardar vehiculo
           </Button>
         </form>
       </Modal>
@@ -223,7 +223,7 @@ export default function BusesAdmin() {
         <p>
           Se borra <strong>{toDelete?.name}</strong> con sus fotos y sus viajes que ya pasaron (con sus reservas).
         </p>
-        <p className="text-niebla">Si tiene viajes próximos no se puede borrar: cambiales el bus primero, o solo desactivalo.</p>
+        <p className="text-niebla">Si tiene viajes próximos no se puede borrar: cambiales el vehiculo primero, o solo desactivalo.</p>
       </ConfirmDelete>
     </>
   );
@@ -296,7 +296,7 @@ function BusPhotos({ bus, onChanged }: { bus: AdminBus; onChanged: () => void })
           className="mt-3 flex h-28 w-full flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-linea text-niebla hover:border-ruta hover:text-ruta"
         >
           <ImagePlus className="size-6" />
-          Subí fotos del bus por fuera y por dentro
+          Subí fotos del vehiculo por fuera y por dentro
         </button>
       ) : (
         <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -331,7 +331,7 @@ function BusPhotos({ bus, onChanged }: { bus: AdminBus; onChanged: () => void })
           ))}
         </ul>
       )}
-      <p className="mt-2 text-sm text-niebla">La principal es la que aparece en la lista de horarios. Las fotos se achican solas antes de subir.</p>
+      <p className="mt-2 text-sm text-niebla">La principal es la que aparece en la lista de horarios.</p>
     </div>
   );
 }
