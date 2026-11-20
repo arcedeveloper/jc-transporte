@@ -49,7 +49,7 @@ const sections: Section[] = [
     tabs: [
       { href: '/admin/ajustes', label: 'Empresa' },
       { href: '/admin/usuarios', label: 'Usuarios' },
-      { href: '/admin/buses', label: 'Buses' },
+      { href: '/admin/buses', label: 'Vehiculos' },
     ],
   },
 ];
