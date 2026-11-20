@@ -91,7 +91,7 @@ export default function BusesAdmin() {
 
   return (
     <>
-      <PageTitle title="Buses">
+      <PageTitle title="Vehiculos">
         <Button onClick={() => open('new')}>
           <Plus className="size-5" aria-hidden /> Agregar Vehiculo
         </Button>
